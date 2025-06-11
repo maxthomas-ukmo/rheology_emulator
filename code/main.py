@@ -15,8 +15,8 @@ def parse_arguments():
     parser.add_argument('--inputs', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], help="List of potential input variables to retrieve from raw data")
     parser.add_argument('--input_path', type=str, required=False, help="Path to the raw data file, for use with --get_raw_data and --get_processed_data")
     parser.add_argument('--output_path', type=str, required=False, help="Path to save the processed data, for use with --get_raw_data and --get_processed_data")
-    parser.add_argument('--labels', nargs='*', required=False, help="Labels for the processed data")
-    parser.add_argument('--features', nargs='*', required=False, help="Fetures for the processed data")
+    parser.add_argument('--features', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], required=False, help="Features for the processed data")
+    parser.add_argument('--labels', nargs='*', default=['sivelv'], required=False, help="Labels for the processed data")
     parser.add_argument('--subset_region', type=str, required=False, default='Arctic', help="Region to subset the data to, default is 'Arctic'")
 
     return vars(parser.parse_args())
@@ -57,6 +57,18 @@ def intermediate_data_retrieval(args):
     from src.raw_processing import process_save_intermediate_data
     process_save_intermediate_data(args['input_path'], args['output_path'], args)
 
+def pairs_retrieval(args):
+    if not args['get_pairs_data']:
+        print("Processed data retrieval mode is not enabled. Use --get_processed_data to enable it.")
+        return
+
+    if not args['input_path'] or not args['output_path']:
+        print("Both --input_path and --output_path must be provided for processed data retrieval.")
+        return
+    
+    print("Retrieving processed data...")
+    from src.raw_processing import process_save_pairs
+    process_save_pairs(args['input_path'], args['output_path'], args)
 
 
 
@@ -75,6 +87,9 @@ def main():
 
     elif args['get_intermediate_data']:
         intermediate_data_retrieval(args)
+
+    elif args['get_pairs_data']:
+        pairs_retrieval(args)
         
 
 if __name__ == "__main__":

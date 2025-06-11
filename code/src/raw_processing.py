@@ -78,7 +78,7 @@ def make_feature_label_pairs(input_path, args):
     data = data.dropna(dim='xy')
 
     features = data[args['features']]
-    labels = data['labels']
+    labels = data[args['labels']]
     pairs = []
     for itime in range(features.time_counter.size - 1):
         feature = features.isel(time_counter=itime)
