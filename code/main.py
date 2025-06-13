@@ -19,8 +19,17 @@ def parse_arguments():
     parser.add_argument('--labels', nargs='*', default=['sivelv'], required=False, help="Labels for the processed data")
     parser.add_argument('--subset_region', type=str, required=False, default='Arctic', help="Region to subset the data to, default is 'Arctic'")
 
+    # Optional arguments for training
+    parser.add_argument('--pairs_path', type=str, required=False, help="Path to the pairs data file for training")
+    parser.add_argument('--results_path', type=str, required=False, help="Path to where model results will be saved")
+    parser.add_argument('--batch_size', type=int, default=64, help="Batch size for training")
+    parser.add_argument('--val_fraction', type=float, default=0.2, help="Fraction of data to use for validation")
+    parser.add_argument('--test_fraction', type=float, default=0.1, help="Fraction of data to use for testing")
+    parser.add_argument('--scale_features', action='store_true', default=True, help="Enable feature scaling for training")
+
     return vars(parser.parse_args())
 
+# TODO: Move these functions to a separate module for better organization, or possibly to a class that can contain the various steps
 def raw_data_retrieval(args):
 
     if not args['get_raw_data']:
@@ -70,6 +79,19 @@ def pairs_retrieval(args):
     from src.raw_processing import process_save_pairs
     process_save_pairs(args['input_path'], args['output_path'], args)
 
+def train_model(args):
+    if not args['train']:
+        print("Training mode is not enabled. Use --train to enable it.")
+        return
+
+    if not args['pairs_path'] or not args['results_path']:
+        print("Both --pairs_path and --results_path must be provided for training.")
+        return
+
+    print("Training model...")
+    from src.train_nn import train_save_eval
+    train_save_eval(args)
+
 
 
 def main():
@@ -90,6 +112,9 @@ def main():
 
     elif args['get_pairs_data']:
         pairs_retrieval(args)
+
+    elif args['train']:
+        train_model(args)
         
 
 if __name__ == "__main__":

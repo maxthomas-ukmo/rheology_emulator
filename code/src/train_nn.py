@@ -8,7 +8,7 @@ import torch.optim as optim
 # import ordinary least squares regression
 from sklearn.linear_model import LinearRegression
 
-from dataset_utils import TorchDataManager
+from .dataset_utils import TorchDataManager
 
 
 def define_nn(n_features, n_labels, architecture=None):
@@ -27,8 +27,6 @@ def define_nn(n_features, n_labels, architecture=None):
     # ---------------------------
     return model
 
-
-
 def nn_options(model, architecture=None):
     # TODO: Replace this placeholder ---------
     criterion = nn.MSELoss()  # Mean Squared Error Loss
@@ -37,102 +35,110 @@ def nn_options(model, architecture=None):
     return criterion, optimizer, n_epochs
     # ---------------------------
 
-def main(arguments):
-    # Initialize the data manager
-    data_manager = TorchDataManager(arguments['pairs_path'], arguments)
+class NNCapsule:
+    def __init__(self, arguments):
+        self.arguments = arguments
 
-    # Define train, val and test datasets
-    train_loader = data_manager.train.dataset
-    val_loader = data_manager.val.dataset
-    # test_loader = data_manager.test.dataset # not currently used
+        # Load data
+        self.data_manager = TorchDataManager(arguments['pairs_path'], arguments)
+        self.train_loader = self.data_manager.train.dataset
+        self.val_loader = self.data_manager.val.dataset
+        self.n_features = self.train_loader[0][0].shape[0]
+        self.n_labels = self.train_loader[0][1].shape[0]
+        self.scaler = self.data_manager.scaler
 
-    # TODO: move these to the data manager
-    n_features = train_loader[0][0].shape[0]  # Number of features in the dataset
-    n_labels = train_loader[0][1].shape[0]  # Number of labels in the dataset
+        # Define model
+        self.model = define_nn(self.n_features, self.n_labels, architecture=None)
+        self.criterion, self.optimizer, self.n_epochs = nn_options(self.model, architecture=None)
+        self.train_losses = []
+        self.val_losses = []
 
-    # Define nn model
-    model = define_nn(n_features, n_labels, architecture=None)
-
-    # Define loss function and optimizer
-    criterion, optimizer, n_epochs = nn_options(model, architecture=None)
-
-    # TODO: wrap in class
-    # Train nn model
-    train_losses = []
-    val_losses = []
-
-    for epoch in range(n_epochs):
-        model.train()
-        running_loss = 0.0
-        for inputs, targets in train_loader:
-            #inputs, targets = inputs.to(device), targets.to(device)
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
-        train_losses.append(running_loss / len(train_loader))
-
-        # Validation
-        model.eval()
-        val_loss = 0.0
-        with torch.no_grad():
-            for inputs, targets in val_loader:
+    def train(self):
+        for epoch in range(self.n_epochs):
+            self.model.train()
+            running_loss = 0.0
+            for inputs, targets in self.train_loader:
                 # inputs, targets = inputs.to(device), targets.to(device)
-                outputs = model(inputs)
-                loss = criterion(outputs, targets)
-                val_loss += loss.item()
-        val_losses.append(val_loss / len(val_loader))
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                loss = self.criterion(outputs, targets)
+                loss.backward()
+                self.optimizer.step()
+                running_loss += loss.item()
+            self.train_losses.append(running_loss / len(self.train_loader))
 
-        print(f"Epoch {epoch+1}, Train Loss: {train_losses[-1]:.4f}, Val Loss: {val_losses[-1]:.4f}")
+            # Validation
+            self.model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for inputs, targets in self.val_loader:
+                    # inputs, targets = inputs.to(device), targets.to(device)
+                    outputs = self.model(inputs)
+                    loss = self.criterion(outputs, targets)
+                    val_loss += loss.item()
+            self.val_losses.append(val_loss / len(self.val_loader))
 
-    # Save trained model
-    # torch.save(model.state_dict(), arguments['model_save_path'])
-    # print(f'Model saved to {arguments["model_save_path"]}')
+            print(f"Epoch {epoch+1}, Train Loss: {self.train_losses[-1]:.4f}, Val Loss: {self.val_losses[-1]:.4f}")
 
-    plt.figure(figsize=(5, 5))
-    plt.plot(train_losses, label='Train Loss')
-    plt.plot(val_losses, label='Validation Loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.show()
+    def plot_train_losses(self, train_losses, val_losses):
+        fig = plt.figure(figsize=(5, 5))
+        plt.plot(train_losses, label='Train Loss')
+        plt.plot(val_losses, label='Validation Loss')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        # TODO: replace show with some saving option
+        plt.show()
+        return fig
+    
+    def ytrue_ypred(self, loader):
+        predictions = []
+        true_values = []
+        with torch.no_grad():  # Disable gradient tracking
+            for inputs, targets in loader:
+                #inputs = inputs.to(device)
+                outputs = self.model(inputs)
+                # predictions.append(outputs.cpu())
+                # true_values.append(targets.cpu())
+                predictions.append(outputs)
+                true_values.append(targets)
 
-    model.eval()  # Set model to evaluation mode
-    predictions = []
-    true_values = []
+        # Concatenate all batches into single tensors
+        predictions = torch.cat(predictions, dim=0)
+        true_values = torch.cat(true_values, dim=0)
 
-    with torch.no_grad():  # Disable gradient tracking
-        for inputs, targets in val_loader:
-            #inputs = inputs.to(device)
-            outputs = model(inputs)
-            # predictions.append(outputs.cpu())
-            # true_values.append(targets.cpu())
-            predictions.append(outputs)
-            true_values.append(targets)
+        return true_values, predictions
+    
+    def plot_ytrue_ypred(self, loader):
+        true_values, predictions = self.ytrue_ypred(loader)
 
-    # Concatenate all batches into single tensors
-    predictions = torch.cat(predictions, dim=0)
-    true_values = torch.cat(true_values, dim=0)
+        # Fit a linear regression model on the predictions and true values, then plot the trendline
+        reg = LinearRegression().fit(true_values, predictions)
+        plt.figure(figsize=(8, 8))  
+        y_pred = reg.predict(true_values)
+        gradient = reg.coef_[0][0]
+
+        plt.scatter(true_values, predictions, s=0.1)
+        plt.plot([-5,5], [-5,5], 'r--', label='1:1')
+        plt.plot(true_values, y_pred, 'r', label='Linear fit: ' + str(gradient))
+        plt.xlabel('True Values')
+        plt.ylabel('Predictions')
+        plt.grid()
+        plt.legend()
+        # TODO: replace show with some saving option
+        plt.show()
+            
+
+def train_save_eval(arguments):
+
+    nn_capsule = NNCapsule(arguments)
+
+    nn_capsule.train()
+
+    nn_capsule.plot_train_losses(nn_capsule.train_losses, nn_capsule.val_losses)
+    nn_capsule.plot_ytrue_ypred(nn_capsule.val_loader)
 
 
-    # Fit a linear regression model on the predictions and true values, then plot the trendline
-    reg = LinearRegression().fit(true_values, predictions)
-    plt.figure(figsize=(8, 8))  
-    y_pred = reg.predict(true_values)
-    gradient = reg.coef_[0][0]
-
-
-    plt.scatter(true_values, predictions, s=0.1)
-    plt.plot([-5,5], [-5,5], 'r--', label='1:1')  # Diagonal line
-    plt.plot(true_values, y_pred, 'r', label='Linear fit: ' + str(gradient))  # Trendline
-    plt.xlabel('True Values')
-    plt.ylabel('Predictions')
-
-    plt.grid()
-    plt.legend()
-
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -142,5 +148,5 @@ if __name__ == "__main__":
             'test_fraction': 0.1,
             'scale_features': True}
     
-    main(args)
+    train_save_eval(args)
 
