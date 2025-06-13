@@ -3,6 +3,10 @@ import os
 import dask
 import numpy as np
 
+# TODO: populate this class such that data for training the model, evaluating the model, and eventaully plotting geospatial data
+class RheologyData(argumens):
+    pass
+
 def load_raw_data(input_path):
     """
     Load raw data from the specified input path.
