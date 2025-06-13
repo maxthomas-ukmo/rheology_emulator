@@ -10,16 +10,27 @@ from pathlib import Path
 
 class DataManager:
     def __init__(self, raw_path, interim_path, pairs_path, arguments=None):
+        # Define paths for data. These are either loaded in or created
         self.raw_path = Path(raw_path)
         self.interim_path = Path(interim_path)
         self.pairs_path = Path(pairs_path)
+
+        # Arguments for processing the data. These should be supplied as the defaults are just for testing.
         self.arguments = arguments if arguments is not None else self.default_arguments()
+
+        # Load or prepare the data
+        self.load_or_prepare()
+
+        # TODO: decide where and how to set seed
+        # Set the random seed for reproducibility
+        # random.seed(self.arguments['seed'])
 
     def default_arguments(self):
         return {'subset_region': 'Arctic',
                 'inputs': ['siconc', 'sivelv'],
                 'features': ['siconc', 'sivelv'],
-                'labels': ['sivelv'],}
+                'labels': ['sivelv'],
+                'seed': 0}
 
     def load_or_prepare(self):
         # Step 1: Check raw data
@@ -45,7 +56,7 @@ class DataManager:
         # Step 3: Check or create model input
         if self.pairs_path.exists():
             print(f'Loading model input data from {self.pairs_path}')
-            pairs = self._load(self.pairs_path)
+            pairs = self._load_pickle(self.pairs_path)
         else:
             print(f'Creating mode input data from {self.interim_path}')
             print(f'Using arguments: {self.arguments}')
@@ -128,9 +139,23 @@ class DataManager:
 
         features = data[args['features']]
         labels = data[args['labels']]
-        pairs = []
+        xr_pairs = []
         for itime in range(features.time_counter.size - 1):
             feature = features.isel(time_counter=itime)
             label = labels.isel(time_counter=itime+1)
+            xr_pairs.append((feature, label))
+
+        # Convert xr.datasets to pandas DataFrames
+        pairs = []
+        for pair in xr_pairs:
+            feature = pair[0].to_dataframe()[args['features']].values
+            label = pair[1].to_dataframe()[args['labels']].values
             pairs.append((feature, label))
+
         return pairs
+    
+
+
+    
+
+    
