@@ -1,0 +1,10 @@
+**__pycache__**
+**junk**
+
+code/*.ipynb*
+code/*.nc*
+code/*.pkl*
+
+code/src/*.ipynb*
+code/src/*.nc*
+code/src/*.pkl*
