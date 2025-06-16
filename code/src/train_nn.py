@@ -46,13 +46,31 @@ def build_model_from_layers(layer_list):
 
     return model
 
-def nn_options(model, architecture=None):
-    # TODO: Replace this placeholder ---------
-    criterion = nn.MSELoss()  # Mean Squared Error Loss
-    optimizer = optim.Adam(model.parameters(), lr=0.001)  # Adam optimizer
-    n_epochs = 10  # Number of epochs for training
+def nn_options(model, parameters='../configs/parameters/nn_base.yaml'):
+    """
+    Define the loss function, optimizer, and number of epochs based on a YAML configuration.
+    """
+    if parameters is None:
+        raise ValueError("An architecture YAML file must be provided.")
+
+    # Load the YAML configuration
+    with open(parameters, "r") as f:
+        config = yaml.safe_load(f)
+
+    # Define the loss function
+    loss_type = config.get("loss", "MSELoss")  # Default to MSELoss if not specified
+    criterion = getattr(nn, loss_type)()
+
+    # Define the optimizer
+    optimizer_type = config.get("optimizer", "Adam")  # Default to Adam if not specified
+    lr = config.get("learning_rate", 0.001)  # Default learning rate
+    optimizer_class = getattr(optim, optimizer_type)
+    optimizer = optimizer_class(model.parameters(), lr=lr)
+
+    # Define the number of epochs
+    n_epochs = config.get("epochs", 10)  # Default to 10 epochs
+
     return criterion, optimizer, n_epochs
-    # ---------------------------
 
 
 
@@ -71,8 +89,10 @@ class NNCapsule:
 
         # Define model
         self.architecture = arguments['architecture']
+        self.parameters = arguments['parameters']
         self.model = self._define_nn()
-        self.criterion, self.optimizer, self.n_epochs = nn_options(self.model, architecture=None)
+        # TODO: split the below up so that they're called separately, or do some order agnostic unpacking of all the parameters
+        self.criterion, self.optimizer, self.n_epochs = nn_options(self.model, self.parameters)
         self.train_losses = []
         self.val_losses = []
 
