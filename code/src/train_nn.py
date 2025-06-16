@@ -13,21 +13,36 @@ from sklearn.linear_model import LinearRegression
 
 from .dataset_utils import TorchDataManager
 
+def nn_layer_list(config_path='../configs/nn_architecture/base.yaml'):
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)['model']
+    layer_list = []
+    for item in config:
+        layer_list.append([config[item]['type'], config[item]['args']])
+    return layer_list
 
-def define_nn(n_features, n_labels, architecture=None):
-    # TODO: Replace this placeholder ---------
-    # class SimpleNN(nn.Module):
-    #     def __init__(self):
-    #         super(SimpleNN, self).__init__()
-    #         self.fc1 = nn.Linear(2, 64)
-    #         self.fc2 = nn.Linear(64, 1)
+def match_io_dims(layer_list, n_features, n_labels):
+    layer_list[0][1][0] = n_features  # Set input dimension of the first layer
+    layer_list[-1][1][1] = n_labels  # Set output dimension of the last layer
+    return layer_list
 
-    #     def forward(self, x):
-    #         x = torch.relu(self.fc1(x))
-    #         x = self.fc2(x)
-    #         return x
-    # model = SimpleNN()
-    # ---------------------------
+def build_model_from_layers(layer_list):
+    # Create a list to hold the layers
+    layers = []
+
+    # Iterate through the layer definitions
+    for layer_type, args in layer_list:
+        # Get the layer class from nn
+        layer_class = getattr(torch.nn, layer_type)
+        # Instantiate the layer with the provided arguments
+        layers.append(layer_class(*args))
+
+    # Create the neural network using nn.Sequential
+    model = torch.nn.Sequential(*layers)
+
+    # Print the model
+    print('Neural net architecture:')
+    print(model)
 
     return model
 
@@ -39,25 +54,6 @@ def nn_options(model, architecture=None):
     return criterion, optimizer, n_epochs
     # ---------------------------
 
-def build_model_from_yaml(self, yaml_path):
-    with open(yaml_path, 'r') as f:
-        layer_config = yaml.safe_load(f)['model']
-
-    layers = []
-    for il, layer in enumerate(layer_config):
-        for name, args in layer.items():
-            layer_class = getattr(nn, name)
-            if il == 0 and name == 'Linear':
-                args[0] = self.n_features  # Set input features for the first layer
-            elif il == len(layer_config) - 1 and name == 'Linear':
-                args[0] = self.n_labels
-            layers.append(layer_class(*args))
-
-    return nn.Sequential(*layers)
-
-# Example usage
-model = build_model_from_yaml("model.yaml")
-print(model)
 
 
 class NNCapsule:
@@ -68,15 +64,24 @@ class NNCapsule:
         self.data_manager = TorchDataManager(arguments['pairs_path'], arguments)
         self.train_loader = self.data_manager.train.dataset
         self.val_loader = self.data_manager.val.dataset
-        self.n_features = self.train_loader[0][0].shape[0]
-        self.n_labels = self.train_loader[0][1].shape[0]
+        self.n_features = self.train_loader[0][0].shape[1]
+        self.n_labels = self.train_loader[0][1].shape[1]
+        self.n_observations = self.train_loader[0][0].shape[0]
         self.scaler = self.data_manager.scaler
 
         # Define model
-        self.model = define_nn(self.n_features, self.n_labels, architecture=None)
+        self.architecture = arguments['architecture']
+        self.model = self._define_nn()
         self.criterion, self.optimizer, self.n_epochs = nn_options(self.model, architecture=None)
         self.train_losses = []
         self.val_losses = []
+
+    def _define_nn(self):
+        layer_list = nn_layer_list(self.architecture)
+        layer_list = match_io_dims(layer_list, self.n_features, self.n_labels)
+        model = build_model_from_layers(layer_list)
+        return model
+
 
     def train(self):
         for epoch in range(self.n_epochs):
