@@ -26,6 +26,7 @@ def parse_arguments():
     parser.add_argument('--val_fraction', type=float, default=0.2, help="Fraction of data to use for validation")
     parser.add_argument('--test_fraction', type=float, default=0.1, help="Fraction of data to use for testing")
     parser.add_argument('--scale_features', action='store_true', default=True, help="Enable feature scaling for training")
+    parser.add_argument('--architecture', type=int, default=0, help="Full path to yaml with architecture")
 
     return vars(parser.parse_args())
 
