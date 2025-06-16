@@ -1,7 +1,10 @@
 import pickle 
 import torch
+import yaml
+
 
 import matplotlib.pyplot as plt
+from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
 
@@ -13,18 +16,19 @@ from .dataset_utils import TorchDataManager
 
 def define_nn(n_features, n_labels, architecture=None):
     # TODO: Replace this placeholder ---------
-    class SimpleNN(nn.Module):
-        def __init__(self):
-            super(SimpleNN, self).__init__()
-            self.fc1 = nn.Linear(2, 64)
-            self.fc2 = nn.Linear(64, 1)
+    # class SimpleNN(nn.Module):
+    #     def __init__(self):
+    #         super(SimpleNN, self).__init__()
+    #         self.fc1 = nn.Linear(2, 64)
+    #         self.fc2 = nn.Linear(64, 1)
 
-        def forward(self, x):
-            x = torch.relu(self.fc1(x))
-            x = self.fc2(x)
-            return x
-    model = SimpleNN()
+    #     def forward(self, x):
+    #         x = torch.relu(self.fc1(x))
+    #         x = self.fc2(x)
+    #         return x
+    # model = SimpleNN()
     # ---------------------------
+
     return model
 
 def nn_options(model, architecture=None):
@@ -34,6 +38,27 @@ def nn_options(model, architecture=None):
     n_epochs = 10  # Number of epochs for training
     return criterion, optimizer, n_epochs
     # ---------------------------
+
+def build_model_from_yaml(self, yaml_path):
+    with open(yaml_path, 'r') as f:
+        layer_config = yaml.safe_load(f)['model']
+
+    layers = []
+    for il, layer in enumerate(layer_config):
+        for name, args in layer.items():
+            layer_class = getattr(nn, name)
+            if il == 0 and name == 'Linear':
+                args[0] = self.n_features  # Set input features for the first layer
+            elif il == len(layer_config) - 1 and name == 'Linear':
+                args[0] = self.n_labels
+            layers.append(layer_class(*args))
+
+    return nn.Sequential(*layers)
+
+# Example usage
+model = build_model_from_yaml("model.yaml")
+print(model)
+
 
 class NNCapsule:
     def __init__(self, arguments):
