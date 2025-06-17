@@ -138,7 +138,7 @@ class NNCapsule:
         plt.ylabel('Loss')
         plt.legend()
         # TODO: replace show with some saving option
-        plt.show()
+        plt.savefig(self.arguments['results_path'] + 'train_losses.png')
         return fig
     
     def ytrue_ypred(self, loader):
@@ -176,7 +176,7 @@ class NNCapsule:
         plt.grid()
         plt.legend()
         # TODO: replace show with some saving option
-        plt.show()
+        plt.savefig(self.arguments['results_path'] + 'true_pred.png')
             
 
 def train_save_eval(arguments):

@@ -4,6 +4,8 @@ import shutil
 import os
 import yaml
 
+from datetime import datetime
+
 def parse_arguments():
 
     parser = argparse.ArgumentParser()
@@ -51,6 +53,18 @@ def load_training_config(confg_name, arguments):
     
     arguments.update(config)
 
+def setup_results(args):
+    # Get the current time
+    current_time = datetime.now()
+
+    # Format the time as yyyymmdd_HHMM
+    current_time = current_time.strftime("%Y%m%d_%H%M")
+
+    args['results_path'] = args['results_path'] + current_time +'/'
+
+    os.makedirs(args['results_path'], exist_ok=True) 
+    logging.info(f"Results directory set up at {args['results_path']}")
+
 
 def retrieve_data(args):
     if not args['get_data']:
@@ -87,7 +101,9 @@ def train_model(args):
     if not args['training_cfg'] is None:
         load_training_config(args['training_cfg'], args)
 
-    print(args)
+    logging.info(args)
+
+    setup_results(args)  # Set up results directory
 
     if not args['train']:
         print("Training mode is not enabled. Use --train to enable it.")
