@@ -1,0 +1,7 @@
+# Paths, relative to /code where main.py is run
+pairs_path: ../data/processed/dq557_1ts_5F.pkl
+parameters: ../configs/parameters/nn_base.yaml
+results_path: ../results/nn/full_features/nn_base.yaml
+architecture: ../configs/nn_architecture/base.yaml
+
+# TODO: add features, labels, batch size, scaler, val frac, test frac, epochs

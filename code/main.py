@@ -2,6 +2,7 @@ import argparse
 import logging
 import shutil
 import os
+import yaml
 
 def parse_arguments():
 
@@ -18,6 +19,10 @@ def parse_arguments():
     parser.add_argument('--features', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], required=False, help="Features for the processed data")
     parser.add_argument('--labels', nargs='*', default=['sivelv'], required=False, help="Labels for the processed data")
     parser.add_argument('--subset_region', type=str, required=False, default='Arctic', help="Region to subset the data to, default is 'Arctic'")
+
+
+    # Run configuration file
+    parser.add_argument('--training_cfg', type=str, help="Name of the training configuration file to load")
 
     # Optional arguments for training
     parser.add_argument('--pairs_path', type=str, required=False, help="Path to the pairs data file for training")
@@ -37,6 +42,14 @@ def setup_logging(log_file="main.log"):
         format="%(asctime)s - %(levelname)s - %(message)s"
     )
     logging.getLogger().addHandler(logging.StreamHandler())  # Optional: Also log to console
+
+def load_training_config(confg_name, arguments):
+    
+    confg_path = '../configs/training/' + confg_name + '.yaml'
+    with open(confg_path, 'r') as file:
+        config = yaml.safe_load(file)
+    
+    arguments.update(config)
 
 
 def retrieve_data(args):
@@ -65,8 +78,17 @@ def retrieve_data(args):
 
     os.remove('retrieve_data.log')  # Clean up log file after copying
                                
-
 def train_model(args):
+
+    # Setup logging for training
+    setup_logging(log_file='train_model.log')  # Set up logging
+
+    # Load in config file for training, overwriting any duplications in args
+    if not args['training_cfg'] is None:
+        load_training_config(args['training_cfg'], args)
+
+    print(args)
+
     if not args['train']:
         print("Training mode is not enabled. Use --train to enable it.")
         return
@@ -75,7 +97,7 @@ def train_model(args):
         print("Both --pairs_path and --results_path must be provided for training.")
         return
 
-    print("Training model...")
+    logging.info("Training model...")
     from src.train_nn import train_save_eval
     train_save_eval(args)
 

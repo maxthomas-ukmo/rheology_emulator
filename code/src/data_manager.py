@@ -25,6 +25,7 @@ class DataManager:
         self.interim_path = Path(interim_path)
         self.pairs_path = Path(pairs_path)
 
+
         # Arguments for processing the data. These should be supplied as the defaults are just for testing.
         self.arguments = arguments if arguments is not None else self.default_arguments()
 
