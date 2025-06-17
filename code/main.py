@@ -63,7 +63,7 @@ def retrieve_data(args):
     if data_manager.created_pairs:
         shutil.copy('retrieve_data.log', args['pairs_path']+'.log')
 
-    #os.remove('retrieve_data.log')  # Clean up log file after copying
+    os.remove('retrieve_data.log')  # Clean up log file after copying
                                
 
 def train_model(args):
