@@ -1,20 +1,20 @@
 import argparse 
+import logging
+import shutil
 import os
 
 def parse_arguments():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--get_raw_data', action='store_true', help="Enable raw data retrieval mode")
-    parser.add_argument('--get_intermediate_data', action='store_true', help="Enable intermediate data retrieval mode")
-    parser.add_argument('--get_pairs_data', action='store_true', help="Enable processed data retrieval mode")
+    parser.add_argument('--get_data', action='store_true', help="Enable data retrieval mode")
     parser.add_argument('--train', action='store_true', help="Enable training mode")
     parser.add_argument('--evaluate', action='store_true', help="Enable evaluation mode")
 
     # Optional arguments for raw and processed data retrieval
     parser.add_argument('--inputs', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], help="List of potential input variables to retrieve from raw data")
-    parser.add_argument('--input_path', type=str, required=False, help="Path to the raw data file, for use with --get_raw_data and --get_processed_data")
-    parser.add_argument('--output_path', type=str, required=False, help="Path to save the processed data, for use with --get_raw_data and --get_processed_data")
+    parser.add_argument('--raw_path', type=str, required=False, help="Path to the raw data file, for use with --get_data")
+    parser.add_argument('--interim_path', type=str, required=False, help="Path to the intermediate data, for use with --get_data")
     parser.add_argument('--features', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], required=False, help="Features for the processed data")
     parser.add_argument('--labels', nargs='*', default=['sivelv'], required=False, help="Labels for the processed data")
     parser.add_argument('--subset_region', type=str, required=False, default='Arctic', help="Region to subset the data to, default is 'Arctic'")
@@ -30,55 +30,41 @@ def parse_arguments():
 
     return vars(parser.parse_args())
 
-# TODO: Move these functions to a separate module for better organization, or possibly to a class that can contain the various steps
-def raw_data_retrieval(args):
+def setup_logging(log_file="main.log"):
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+    logging.getLogger().addHandler(logging.StreamHandler())  # Optional: Also log to console
 
-    if not args['get_raw_data']:
-        print("Raw data retrieval mode is not enabled. Use --get_raw_data to enable it.")
-        return
 
-    if not args['input_path'] or not args['output_path']:
-        print("Both --input_path and --output_path must be provided for raw data retrieval.")
-        return
-
-    print("Retrieving raw data...")
-
-    from src.get_raw_data import get_and_save
-
-    get_and_save(args['input_path'], args['output_path'], args['inputs'])
-
-    # check if the data was saved successfully
-    if not os.path.exists(args['output_path']):
-        print(f"Failed to save raw data to {args['output_path']}. Please check the path and try again.")
-    else:
-        print(f"Raw data saved to {args['output_path']}")
-
-def intermediate_data_retrieval(args):
-    
-    if not args['get_intermediate_data']:
-        print("Processed data retrieval mode is not enabled. Use --get_processed_data to enable it.")
-        return
-
-    if not args['input_path'] or not args['output_path']:
-        print("Both --input_path and --output_path must be provided for processed data retrieval.")
+def retrieve_data(args):
+    if not args['get_data']:
+        print("Data retrieval mode is not enabled. Use --get_data to enable it.")
         return
     
-    print("Retrieving processed data...")
-    from src.raw_processing import process_save_intermediate_data
-    process_save_intermediate_data(args['input_path'], args['output_path'], args)
+    setup_logging(log_file='retrieve_data.log')  # Set up logging
+    logging.info(f"Arguments for data retrieval: {args}")
 
-def pairs_retrieval(args):
-    if not args['get_pairs_data']:
-        print("Processed data retrieval mode is not enabled. Use --get_processed_data to enable it.")
-        return
+    from src.data_manager import DataManager
+    data_manager = DataManager(                            
+                                interim_path=args['interim_path'],
+                                pairs_path=args['pairs_path'],
+                                raw_path=args['raw_path'],
+                                arguments=args
+    )
+    logging.info("Data retrieval completed successfully.")
 
-    if not args['input_path'] or not args['output_path']:
-        print("Both --input_path and --output_path must be provided for processed data retrieval.")
-        return
-    
-    print("Retrieving processed data...")
-    from src.raw_processing import process_save_pairs
-    process_save_pairs(args['input_path'], args['output_path'], args)
+    # Copy log to interim and pairs paths
+    if data_manager.created_interim:
+        shutil.copy('retrieve_data.log', args['interim_path']+'.log')
+
+    if data_manager.created_pairs:
+        shutil.copy('retrieve_data.log', args['pairs_path']+'.log')
+
+    #os.remove('retrieve_data.log')  # Clean up log file after copying
+                               
 
 def train_model(args):
     if not args['train']:
@@ -93,26 +79,18 @@ def train_model(args):
     from src.train_nn import train_save_eval
     train_save_eval(args)
 
-
-
 def main():
     
     args = parse_arguments()
     print(args)
 
     # Check if multiple modes are enabled
-    if args['get_raw_data'] + args['get_intermediate_data'] + args['train'] + args['evaluate'] > 1:
-        print("Error: Only one mode can be enabled at a time. Please choose one of --get_raw_data, --get_processed_data, --train, or --evaluate.")
+    if args['get_data'] + args['train'] + args['evaluate'] > 1:
+        print("Error: Only one mode can be enabled at a time. Please choose one of --get_processed_data, --train, or --evaluate.")
         return
-    
-    if args['get_raw_data']:
-        raw_data_retrieval(args)
 
-    elif args['get_intermediate_data']:
-        intermediate_data_retrieval(args)
-
-    elif args['get_pairs_data']:
-        pairs_retrieval(args)
+    elif args['get_data']:
+        retrieve_data(args)
 
     elif args['train']:
         train_model(args)
