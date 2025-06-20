@@ -5,3 +5,5 @@ results_path: ../results/nn/base/
 architecture: ../configs/nn_architecture/base.yaml
 
 # TODO: add features, labels, batch size, scaler, val frac, test frac, epochs
+train_features: ['sivelv','sivelu','siconc']
+train_labels: ['sivelv']
