@@ -1,9 +1,9 @@
 # Paths, relative to /code where main.py is run
-pairs_path: ../data/processed/dq557_1ts_slim.pkl
+pairs_path: ../data/processed/pd_test.pkl
 parameters: ../configs/parameters/nn_base.yaml
 results_path: ../results/nn/base/
 architecture: ../configs/nn_architecture/base.yaml
 
 # TODO: add features, labels, batch size, scaler, val frac, test frac, epochs
-train_features: ['sivelv','sivelu','siconc']
+train_features: ['sivelv','sivelu','utau_oi', 'utau_ai','vtau_oi','vtau_ai','siconc']
 train_labels: ['sivelv']

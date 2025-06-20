@@ -165,9 +165,14 @@ class DataManager:
         # Convert xr.datasets to pandas DataFrames
         pairs = []
         for pair in xr_pairs:
-            feature = pair[0].to_dataframe()[args['features']].values
-            label = pair[1].to_dataframe()[args['labels']].values
+            # feature = pair[0].to_dataframe()[args['features']].values
+            # label = pair[1].to_dataframe()[args['labels']].values
+            feature = pair[0].to_dataframe()[args['features']]
+            label = pair[1].to_dataframe()[args['labels']]
             pairs.append((feature, label))
+
+        print(pairs[0][0].head())  # Print first feature for debugging
+        print(pairs[0][1].head())  # Print first label for debugging
 
         return pairs
     

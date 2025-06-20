@@ -13,6 +13,8 @@ class TorchDataManager:
         self.val_fraction = arguments['val_fraction']
         self.test_fraction = arguments['test_fraction']
         self.scale = arguments['scale_features']
+        self.train_features = arguments['train_features']
+        self.train_labels = arguments['train_labels']
 
         # Load the data from the specified file path
         self.raw_data = self._load()
@@ -39,7 +41,20 @@ class TorchDataManager:
         with open(self.file_path, 'rb') as f:
             pairs = pickle.load(f)
 
+        # Get the required features and labels, and convert to a numpy array
+        pairs = self._extract_features_labels(pairs)
+
         return pairs
+    
+    def _extract_features_labels(self, pairs):
+        # Subset to the desired features and labels
+        for ipair, pair in enumerate(pairs):
+            features = pair[0][self.train_features]
+            labels = pair[1][self.train_labels]
+            pairs[ipair] = [features.values, labels.values]
+
+        return pairs
+
     
     def _scale_features(self, pairs):
         scaler = StandardScaler()
@@ -64,6 +79,8 @@ class TorchDataManager:
         return random_split(self.dataset, [train_len, val_len, test_len])
 
     def _get_data_loaders(self):
+
+    
         # Scale data, or not
         if self.scale:
             self._scale_features(self.pairs)
