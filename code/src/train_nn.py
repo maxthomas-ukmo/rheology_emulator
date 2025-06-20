@@ -8,6 +8,7 @@ from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
 
+
 # import ordinary least squares regression
 from sklearn.linear_model import LinearRegression
 
@@ -89,7 +90,9 @@ class NNCapsule:
 
         # Define model
         self.architecture = arguments['architecture']
-        self.parameters = arguments['parameters']
+        #self.parameters = arguments['parameters']
+        # TODO: this is clunky and params should be wrapped up into arguments
+        self.parameters = '../configs/training/' + arguments['training_cfg'] + '.yaml'
         self.model = self._define_nn()
         # TODO: split the below up so that they're called separately, or do some order agnostic unpacking of all the parameters
         self.criterion, self.optimizer, self.n_epochs = nn_options(self.model, self.parameters)
@@ -168,6 +171,10 @@ class NNCapsule:
         y_pred = reg.predict(true_values)
         gradient = reg.coef_[0][0]
 
+        # Calculate MSE
+        mse = torch.nn.functional.mse_loss(predictions, true_values)
+
+        plt.title(f'MSE: {mse:.2e}, Gradient: {gradient:.4f}')
         plt.scatter(true_values, predictions, s=0.1)
         plt.plot([-5,5], [-5,5], 'r--', label='1:1')
         plt.plot(true_values, y_pred, 'r', label='Linear fit: ' + str(gradient))
@@ -175,7 +182,6 @@ class NNCapsule:
         plt.ylabel('Predictions')
         plt.grid()
         plt.legend()
-        # TODO: replace show with some saving option
         plt.savefig(self.arguments['results_path'] + 'true_pred.png')
             
 
@@ -187,7 +193,7 @@ def train_save_eval(arguments):
 
     nn_capsule.plot_train_losses(nn_capsule.train_losses, nn_capsule.val_losses)
     nn_capsule.plot_ytrue_ypred(nn_capsule.val_loader)
-
+    
 
 
 
