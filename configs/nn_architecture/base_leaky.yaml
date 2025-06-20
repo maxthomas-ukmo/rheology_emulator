@@ -1,0 +1,16 @@
+model:
+  fc1:
+    type: Linear
+    args: [999, 64]
+  relu1:
+    type: LeakyReLU
+    args: []
+  fc2:
+    type: Linear
+    args: [64, 32]
+  relu2:
+    type: LeakyReLU
+    args: []
+  fc3:
+    type: Linear
+    args: [32, 999]
