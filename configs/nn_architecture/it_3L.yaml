@@ -1,11 +1,17 @@
 model:
   fc1:
     type: Linear
-    args: [2, 32]
+    args: [999, 32]
   relu1:
     type: ReLU
     args: []
   fc2:
     type: Linear
     args: [32, 32]
+  relu2:
+    type: ReLU
+    args: []
+  fc3:
+    type: Linear
+    args: [32, 999]
   
