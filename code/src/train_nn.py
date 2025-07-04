@@ -1,9 +1,11 @@
 import pickle 
 import torch
 import yaml
+import logging
 
 
 import matplotlib.pyplot as plt
+import numpy as np
 from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
@@ -73,7 +75,14 @@ def nn_options(model, parameters='../configs/parameters/nn_base.yaml'):
 
     return criterion, optimizer, n_epochs
 
-
+def setup_logging(log_file='train_nn.log'):
+    """
+    Set up logging to a file.
+    """
+    import logging
+    logging.basicConfig(filename=log_file, level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.info("Logging setup complete.")
 
 class NNCapsule:
     def __init__(self, arguments):
@@ -85,7 +94,9 @@ class NNCapsule:
         self.val_loader = self.data_manager.val.dataset
         self.n_features = self.train_loader[0][0].shape[1]
         self.n_labels = self.train_loader[0][1].shape[1]
-        self.n_observations = self.train_loader[0][0].shape[0]
+        self.n_batches = len(self.train_loader)
+        self.n_samples = len(self.train_loader.dataset)
+        self.n_observations = self.train_loader[10][0].shape[0]
         self.scaler = self.data_manager.scaler
 
         # Define model
@@ -99,12 +110,26 @@ class NNCapsule:
         self.train_losses = []
         self.val_losses = []
 
+        # Set up logging
+        setup_logging(log_file='train_nn.log')
+        self._print_summary()
+
+    def _print_summary(self):
+        logging.info("Model Summary:")
+        logging.info(f"Architecture: {self.architecture}")
+        logging.info(f"Parameters: {self.parameters}")
+        logging.info(f"Number of training samples: {self.n_samples}")
+        logging.info(f"Number of data points in sample: {self.n_observations}")
+        logging.info(f"Number of batches: {self.n_batches}")
+        logging.info(f"Number of features: {self.n_features}")
+        logging.info(f"Number of labels: {self.n_labels}")
+    
+
     def _define_nn(self):
         layer_list = nn_layer_list(self.architecture)
         layer_list = match_io_dims(layer_list, self.n_features, self.n_labels)
         model = build_model_from_layers(layer_list)
         return model
-
 
     def train(self):
         for epoch in range(self.n_epochs):
@@ -162,6 +187,18 @@ class NNCapsule:
 
         return true_values, predictions
     
+    # def unscale_ytrue_ypred(self, scaled):
+    #     """
+    #     Unscale the true values and predictions using the scaler.
+    #     """
+    #     if self.scaler is None:
+    #         raise ValueError("Scaler is not defined. Ensure that the data manager has been initialized with scaling.")
+
+    #     # Unscale the values
+    #     unscaled = self.scaler.inverse_transform(scaled)
+    #     return unscaled
+
+    
     def plot_ytrue_ypred(self, loader):
         true_values, predictions = self.ytrue_ypred(loader)
 
@@ -183,6 +220,57 @@ class NNCapsule:
         plt.grid()
         plt.legend()
         plt.savefig(self.arguments['results_path'] + 'true_pred.png')
+
+    def evaluation_figure(self, loader='val', ax_reduce=0.5, n_bins=50):
+
+        if loader == 'val':
+            true_values, predictions = self.ytrue_ypred(self.val_loader)
+        elif loader == 'train':
+            true_values, predictions = self.ytrue_ypred(self.train_loader)
+        # TODO: enable test loader
+        # elif loader == 'test':
+        #     true_values, predictions = self.ytrue_ypred(self.test_loader)
+
+        # Unscale the true values and predictions
+        # true_values = self.unscale_ytrue_ypred(true_values)
+        # predictions = self.unscale_ytrue_ypred(predictions)
+
+        # Fit a linear regression model on the predictions and true values, then plot the trendline
+        reg = LinearRegression().fit(true_values, predictions)
+        gradient = reg.coef_[0][0]
+
+        # Make an evaluation figure, with a hexbin plot and a histogram of the true and predicted
+        plt.figure(figsize=(8,12), dpi=300)
+        plt.subplot(2, 1, 1)
+        plt.hexbin(true_values, predictions, gridsize=150, cmap='Blues', mincnt=10, bins='log')
+        plt.colorbar(label='Counts')
+        plt.plot([-5, 5], [-5, 5], 'r--', label='1:1')
+        plt.plot(true_values, reg.predict(true_values), 'r', label='Linear fit: '+ str(round(gradient,2)))
+        plt.xlabel('True Values')
+        plt.ylabel('Predictions')
+        axmin = min(true_values.min(), predictions.min())
+        axmax = max(true_values.max(), predictions.max())
+        plt.ylim(axmin*ax_reduce, axmax*ax_reduce)
+        plt.xlim(axmin*ax_reduce, axmax*ax_reduce)
+        plt.title(f'MSE: {torch.nn.functional.mse_loss(predictions, true_values):.2e}, Gradient: {gradient:.4f}')
+        plt.legend()
+
+        plt.subplot(2, 1, 2)
+        bin_edges = np.linspace(axmin, axmax, n_bins + 1)
+        plt.hist(true_values, bins=bin_edges, alpha=0.5, label='True Values', color='blue', density=True)
+        plt.hist(predictions, bins=bin_edges, alpha=0.5, label='Predictions', color='orange', density=True)
+        plt.xlabel('Values')
+        plt.ylabel('Counts')
+        plt.title('Normalised histogram of True Values and Predictions')
+        plt.legend()
+
+        plt.tight_layout()
+        plt.savefig(self.arguments['results_path'] + f'evaluation_{loader}.png')
+
+        
+
+
+        
             
 
 def train_save_eval(arguments):
@@ -193,6 +281,7 @@ def train_save_eval(arguments):
 
     nn_capsule.plot_train_losses(nn_capsule.train_losses, nn_capsule.val_losses)
     nn_capsule.plot_ytrue_ypred(nn_capsule.val_loader)
+    nn_capsule.evaluation_figure('val')
     
 
 
