@@ -1,6 +1,9 @@
 import argparse 
 import logging
+import numpy
+import random
 import shutil
+import torch
 import os
 import yaml
 
@@ -13,6 +16,8 @@ def parse_arguments():
     parser.add_argument('--get_data', action='store_true', help="Enable data retrieval mode")
     parser.add_argument('--train', action='store_true', help="Enable training mode")
     parser.add_argument('--evaluate', action='store_true', help="Enable evaluation mode")
+
+    parser.add_argument('--seed', type=int, default=0, help="Random seed for reproducibility")
 
     # Optional arguments for raw and processed data retrieval
     parser.add_argument('--inputs', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], help="List of potential input variables to retrieve from raw data")
@@ -36,6 +41,14 @@ def parse_arguments():
     parser.add_argument('--architecture', type=int, default=0, help="Full path to yaml with architecture")
 
     return vars(parser.parse_args())
+
+def set_seed(seed):
+    random.seed(seed)
+    numpy.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def setup_logging(log_file="main.log"):
     logging.basicConfig(
@@ -120,6 +133,10 @@ def train_model(args):
 def main():
     
     args = parse_arguments()
+
+    # Set the random seed for reproducibility
+    set_seed(args['seed'])
+
     print(args)
 
     # Check if multiple modes are enabled
