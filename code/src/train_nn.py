@@ -129,6 +129,12 @@ class NNCapsule:
         layer_list = nn_layer_list(self.architecture)
         layer_list = match_io_dims(layer_list, self.n_features, self.n_labels)
         model = build_model_from_layers(layer_list)
+        # Parallelize model if multiple GPUs are available
+        if torch.cuda.device_count() > 1:
+            logging.info(f"Using {torch.cuda.device_count()} GPUs for DataParallel")
+            model = torch.nn.DataParallel(model)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = model.to(device)
         return model
 
     def train(self):
