@@ -5,6 +5,7 @@ import random
 import shutil
 import torch
 import os
+import pprint
 import yaml
 
 from datetime import datetime
@@ -51,6 +52,11 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
 
 def setup_logging(log_file="main.log"):
+
+    # Delete the log file if it exists already
+    if os.path.exists(log_file):
+        os.remove(log_file)
+
     logging.basicConfig(
         filename=log_file,
         level=logging.INFO,
@@ -114,7 +120,7 @@ def train_model(args):
     if not args['training_cfg'] is None:
         load_training_config(args['training_cfg'], args)
 
-    logging.info(args)
+    logging.info(pprint.pformat(args))
 
     setup_results(args)  # Set up results directory
 
@@ -129,6 +135,10 @@ def train_model(args):
     logging.info("Training model...")
     from src.train_nn import train_save_eval
     train_save_eval(args)
+
+    # Move log file to results directory
+    shutil.copy('train_model.log', args['results_path']+'train_model.log')
+    os.remove('train_model.log')  # Clean up log file after copying
 
 def main():
     

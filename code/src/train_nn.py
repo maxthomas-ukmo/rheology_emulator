@@ -44,8 +44,8 @@ def build_model_from_layers(layer_list):
     model = torch.nn.Sequential(*layers)
 
     # Print the model
-    print('Neural net architecture:')
-    print(model)
+    logging.info('Neural net architecture:')
+    logging.info(model)
 
     return model
 
@@ -156,7 +156,10 @@ class NNCapsule:
                     val_loss += loss.item()
             self.val_losses.append(val_loss / len(self.val_loader))
 
-            print(f"Epoch {epoch+1}, Train Loss: {self.train_losses[-1]:.4f}, Val Loss: {self.val_losses[-1]:.4f}")
+            logging.info(f"Epoch {epoch+1}, Train Loss: {self.train_losses[-1]:.4f}, Val Loss: {self.val_losses[-1]:.4f}")
+
+        logging.info("Training complete.")
+        logging.info(f"Final Train Loss: {self.train_losses[-1]:.4f}, Final Val Loss: {self.val_losses[-1]:.4f}")
 
     def plot_train_losses(self, train_losses, val_losses):
         fig = plt.figure(figsize=(5, 5))
@@ -167,6 +170,7 @@ class NNCapsule:
         plt.legend()
         # TODO: replace show with some saving option
         plt.savefig(self.arguments['results_path'] + 'train_losses.png')
+        logging.info("Training losses plotted and saved.")
         return fig
     
     def ytrue_ypred(self, loader):
@@ -221,6 +225,8 @@ class NNCapsule:
         plt.legend()
         plt.savefig(self.arguments['results_path'] + 'true_pred.png')
 
+        logging.info("True vs Predicted values plotted and saved.")
+
     def evaluation_figure(self, loader='val', ax_reduce=0.5, n_bins=50):
 
         if loader == 'val':
@@ -267,6 +273,7 @@ class NNCapsule:
         plt.tight_layout()
         plt.savefig(self.arguments['results_path'] + f'evaluation_{loader}.png')
 
+        logging.info(f"Evaluation figure for {loader} set saved.")
         
 
 
@@ -282,6 +289,8 @@ def train_save_eval(arguments):
     nn_capsule.plot_train_losses(nn_capsule.train_losses, nn_capsule.val_losses)
     nn_capsule.plot_ytrue_ypred(nn_capsule.val_loader)
     nn_capsule.evaluation_figure('val')
+
+    logging.info("Training complete. Results saved in: " + arguments['results_path'])
     
 
 
