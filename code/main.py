@@ -71,6 +71,7 @@ def load_training_config(confg_name, arguments):
         config = yaml.safe_load(file)
     
     arguments.update(config)
+    arguments['training_config_path'] = confg_path
 
 def setup_results(args):
     # Get the current time
@@ -138,6 +139,7 @@ def train_model(args):
 
     # Move log file to results directory
     shutil.copy('train_model.log', args['results_path']+'train_model.log')
+    shutil.copy(args['training_config_path'], args['results_path']+'used_training_config.yaml')
     os.remove('train_model.log')  # Clean up log file after copying
 
 def main():
