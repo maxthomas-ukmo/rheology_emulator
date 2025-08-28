@@ -1,12 +1,15 @@
 import pickle
 import math
-from torch.utils.data import Dataset, DataLoader, random_split
 import torch
 
+import xarray as xr
+import pandas as pd
+
 from sklearn.preprocessing import StandardScaler
+from torch.utils.data import Dataset, DataLoader, random_split
 
 class TorchDataManager:
-    def __init__(self, file_path, arguments=None):
+    def __init__(self, file_path, arguments=None, zarr=False):
         # Initialize the data manager with the file path and arguments
         self.file_path = file_path
         self.batch_size = arguments['batch_size']
@@ -17,7 +20,11 @@ class TorchDataManager:
         self.train_labels = arguments['train_labels']
 
         # Load the data from the specified file path
-        self.raw_data = self._load()
+        if zarr:
+            self.raw_data = self._load_zarr()
+        else:
+            self.raw_data = self._load()
+
         self.pairs = FeatureLabelDataset(self.raw_data)
 
         # Get loaders for training, validation, and testing
@@ -28,6 +35,10 @@ class TorchDataManager:
         
     def _print_summary(self):
         print(f"Data loaded from {self.file_path}")
+        if self.zarr:
+            print("Data from a zarr")
+        else:
+            print("Data from a pickle file")
         print(f"Batch size: {self.batch_size}")
         print(f"Validation fraction: {self.val_fraction}")
         print(f"Test fraction: {self.test_fraction}")
@@ -46,6 +57,42 @@ class TorchDataManager:
 
         return pairs
     
+    def _load_zarr(self):
+
+        pairs = xr.open_zarr(self.file_path)
+
+        # Process zarr
+        # TODO: Does this belong here, or in data_manager, or in a new function below?
+        # TODO: add specifiable region masking
+        arctic_mask = (pairs.lat > 60).compute()
+        pairs = pairs.where(arctic_mask, drop=True).compute()
+        # nan siconc=0 data
+        siconc_mask = (pairs['features'].sel(feature='siconc') > 0).compute()
+        # broadcast to features and labels
+        mask_features = siconc_mask.expand_dims({'feature': pairs['features'].feature}, axis=1)
+        mask_labels = siconc_mask.expand_dims({'label': pairs['labels'].label}, axis=1)
+        pairs['features'] = pairs['features'].where(mask_features)
+        pairs['labels'] = pairs['labels'].where(mask_labels)
+        # stack spatial
+        pairs = pairs.stack(xy=('x','y'))
+        # drop nan
+        # TODO: check the behaviour of this line. is it dropping any real data?
+        pairs = pairs.dropna(dim='xy')
+
+        # TODO: add specifiable features and labels selection
+        features = pairs['features'].sel(feature=['siconc','sivelv'])
+        labels = pairs['labels'].sel(label=['sivelv'])
+
+        pd_pairs = []
+        for pair in range(features.shape[0]):
+            fl = (
+                pd.DataFrame(features[pair].values.T, columns=features.feature.values),
+                pd.DataFrame(labels[pair].values.T, columns=labels.label.values)
+                )
+            pd_pairs.append(fl)
+
+        return pd_pairs
+
     def _extract_features_labels(self, pairs):
         # Subset to the desired features and labels
         for ipair, pair in enumerate(pairs):
