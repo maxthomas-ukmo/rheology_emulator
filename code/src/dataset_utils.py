@@ -127,7 +127,6 @@ class TorchDataManager:
 
     def _get_data_loaders(self):
 
-    
         # Scale data, or not
         if self.scale:
             self._scale_features(self.pairs)

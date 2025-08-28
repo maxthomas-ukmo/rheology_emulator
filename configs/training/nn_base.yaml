@@ -5,5 +5,7 @@ results_path: ../results/nn/base/
 architecture: ../configs/nn_architecture/base.yaml
 
 # TODO: add features, labels, batch size, scaler, val frac, test frac, epochs
-train_features: ['sivelv','sivelu','utau_oi', 'utau_ai','vtau_oi','vtau_ai','siconc']
+
+# choose from ['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr']
+train_features: ['sivelu','utau_oi', 'utau_ai','vtau_oi','vtau_ai','siconc', 'sithc']
 train_labels: ['sivelv']

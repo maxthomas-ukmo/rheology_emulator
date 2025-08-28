@@ -1,0 +1,20 @@
+# Paths, relative to /code where main.py is run
+pairs_path: ../data/processed/dq557_1ts_arctic.pkl
+#parameters: ../configs/parameters/nn_base.yaml
+results_path: ../results/nn/ft/3/
+architecture: ../configs/nn_architecture/it_2L.yaml
+
+# TODO: add features, labels, batch size, scaler, val frac, test frac, epochs
+
+# choose from ['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr']
+#train_features: ['sivelv','siconc'] # slim
+train_features: ['siconc', 'sithic', 'sivelv', 'sivelu', 'utau_ai', 'utau_oi', 'vtau_ai', 'vtau_oi', 'sistre'] # medi
+#train_features: ['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr']
+
+train_labels: ['sivelv']
+
+loss: MSELoss
+optimizer: Adam
+learning_rate: 0.001
+epochs: 30
+

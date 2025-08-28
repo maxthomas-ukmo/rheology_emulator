@@ -1,0 +1,1 @@
+srun --mem=128G python make_pairs.py $1 | tee logs/${1}_make_pairs.log

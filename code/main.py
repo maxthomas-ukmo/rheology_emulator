@@ -1,7 +1,11 @@
 import argparse 
 import logging
+import numpy
+import random
 import shutil
+import torch
 import os
+import pprint
 import yaml
 
 from datetime import datetime
@@ -13,6 +17,8 @@ def parse_arguments():
     parser.add_argument('--get_data', action='store_true', help="Enable data retrieval mode")
     parser.add_argument('--train', action='store_true', help="Enable training mode")
     parser.add_argument('--evaluate', action='store_true', help="Enable evaluation mode")
+
+    parser.add_argument('--seed', type=int, default=0, help="Random seed for reproducibility")
 
     # Optional arguments for raw and processed data retrieval
     parser.add_argument('--inputs', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], help="List of potential input variables to retrieve from raw data")
@@ -37,7 +43,20 @@ def parse_arguments():
 
     return vars(parser.parse_args())
 
+def set_seed(seed):
+    random.seed(seed)
+    numpy.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 def setup_logging(log_file="main.log"):
+
+    # Delete the log file if it exists already
+    if os.path.exists(log_file):
+        os.remove(log_file)
+
     logging.basicConfig(
         filename=log_file,
         level=logging.INFO,
@@ -52,6 +71,7 @@ def load_training_config(confg_name, arguments):
         config = yaml.safe_load(file)
     
     arguments.update(config)
+    arguments['training_config_path'] = confg_path
 
 def setup_results(args):
     # Get the current time
@@ -101,7 +121,7 @@ def train_model(args):
     if not args['training_cfg'] is None:
         load_training_config(args['training_cfg'], args)
 
-    logging.info(args)
+    logging.info(pprint.pformat(args))
 
     setup_results(args)  # Set up results directory
 
@@ -117,9 +137,18 @@ def train_model(args):
     from src.train_nn import train_save_eval
     train_save_eval(args)
 
+    # Move log file to results directory
+    shutil.copy('train_model.log', args['results_path']+'train_model.log')
+    shutil.copy(args['training_config_path'], args['results_path']+'used_training_config.yaml')
+    os.remove('train_model.log')  # Clean up log file after copying
+
 def main():
     
     args = parse_arguments()
+
+    # Set the random seed for reproducibility
+    set_seed(args['seed'])
+
     print(args)
 
     # Check if multiple modes are enabled
