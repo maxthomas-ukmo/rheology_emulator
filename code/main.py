@@ -21,6 +21,8 @@ def parse_arguments():
     parser.add_argument('--seed', type=int, default=0, help="Random seed for reproducibility")
 
     # Optional arguments for raw and processed data retrieval
+    # TODO: tidy up other options after zarr is working, as zarr seems to be the much tidier way
+    parser.add_argument('--zarr', type=bool, default=False, help="Whether the pairs data is in zarr format")
     parser.add_argument('--inputs', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], help="List of potential input variables to retrieve from raw data")
     parser.add_argument('--raw_path', type=str, required=False, help="Path to the raw data file, for use with --get_data")
     parser.add_argument('--interim_path', type=str, required=False, help="Path to the intermediate data, for use with --get_data")

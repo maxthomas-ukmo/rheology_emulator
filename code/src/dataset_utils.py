@@ -18,9 +18,10 @@ class TorchDataManager:
         self.scale = arguments['scale_features']
         self.train_features = arguments['train_features']
         self.train_labels = arguments['train_labels']
+        self.zarr = zarr
 
         # Load the data from the specified file path
-        if zarr:
+        if self.zarr:
             self.raw_data = self._load_zarr()
         else:
             self.raw_data = self._load()
@@ -85,10 +86,14 @@ class TorchDataManager:
 
         pd_pairs = []
         for pair in range(features.shape[0]):
+            # fl = (
+            #     pd.DataFrame(features[pair].values.T, columns=features.feature.values),
+            #     pd.DataFrame(labels[pair].values.T, columns=labels.label.values)
+            #     )
             fl = (
-                pd.DataFrame(features[pair].values.T, columns=features.feature.values),
-                pd.DataFrame(labels[pair].values.T, columns=labels.label.values)
-                )
+                features[pair].values.T,
+                labels[pair].values.T
+            )
             pd_pairs.append(fl)
 
         return pd_pairs

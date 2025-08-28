@@ -89,7 +89,7 @@ class NNCapsule:
         self.arguments = arguments
 
         # Load data
-        self.data_manager = TorchDataManager(arguments['pairs_path'], arguments)
+        self.data_manager = TorchDataManager(arguments['pairs_path'], arguments, zarr=arguments['zarr'])
         self.train_loader = self.data_manager.train.dataset
         self.val_loader = self.data_manager.val.dataset
         self.n_features = self.train_loader[0][0].shape[1]
