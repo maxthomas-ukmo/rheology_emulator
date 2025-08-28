@@ -162,17 +162,21 @@ class NNCapsule:
                     val_loss += loss.item()
             self.val_losses.append(val_loss / len(self.val_loader))
 
-            logging.info(f"Epoch {epoch+1}, Train Loss: {self.train_losses[-1]:.4f}, Val Loss: {self.val_losses[-1]:.4f}")
+            logging.info(f"Epoch {epoch+1}, Train Loss: {self.train_losses[-1]:.2e}, Val Loss: {self.val_losses[-1]:.2e}")
 
         logging.info("Training complete.")
-        logging.info(f"Final Train Loss: {self.train_losses[-1]:.4f}, Final Val Loss: {self.val_losses[-1]:.4f}")
+        logging.info(f"Final Train Loss: {self.train_losses[-1]:.2e}, Final Val Loss: {self.val_losses[-1]:.2e}")
 
     def plot_train_losses(self, train_losses, val_losses):
+
+        ylims = [0, np.median(train_losses)*4]
+
         fig = plt.figure(figsize=(5, 5))
         plt.plot(train_losses, label='Train Loss')
         plt.plot(val_losses, label='Validation Loss')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
+        plt.ylim(ylims)
         plt.legend()
         # TODO: replace show with some saving option
         plt.savefig(self.arguments['results_path'] + 'train_losses.png')
@@ -220,8 +224,9 @@ class NNCapsule:
 
         # Calculate MSE
         mse = torch.nn.functional.mse_loss(predictions, true_values)
+        rmse_cms = torch.sqrt(mse) * 100  # Convert to cm/s
 
-        plt.title(f'MSE: {mse:.2e}, Gradient: {gradient:.4f}')
+        plt.title(f'RMSE: {rmse_cms:.2e} cm/s, Gradient: {gradient:.3f}')
         plt.scatter(true_values, predictions, s=0.1)
         plt.plot([-5,5], [-5,5], 'r--', label='1:1')
         plt.plot(true_values, y_pred, 'r', label='Linear fit: ' + str(gradient))
@@ -264,7 +269,9 @@ class NNCapsule:
         axmax = max(true_values.max(), predictions.max())
         plt.ylim(axmin*ax_reduce, axmax*ax_reduce)
         plt.xlim(axmin*ax_reduce, axmax*ax_reduce)
-        plt.title(f'MSE: {torch.nn.functional.mse_loss(predictions, true_values):.2e}, Gradient: {gradient:.4f}')
+        mse = torch.nn.functional.mse_loss(predictions, true_values)
+        rmse_cms = torch.sqrt(mse) * 100  # Convert to cm/s
+        plt.title(f'RMSE: {rmse_cms:.2e} cm/s, Gradient: {gradient:.4f}')
         plt.legend()
 
         plt.subplot(2, 1, 2)

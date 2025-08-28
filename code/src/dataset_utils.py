@@ -81,15 +81,11 @@ class TorchDataManager:
         pairs = pairs.dropna(dim='xy')
 
         # TODO: add specifiable features and labels selection
-        features = pairs['features'].sel(feature=['siconc','sivelv'])
-        labels = pairs['labels'].sel(label=['sivelv'])
+        features = pairs['features'].sel(feature=self.train_features)
+        labels = pairs['labels'].sel(label=self.train_labels)
 
         pd_pairs = []
         for pair in range(features.shape[0]):
-            # fl = (
-            #     pd.DataFrame(features[pair].values.T, columns=features.feature.values),
-            #     pd.DataFrame(labels[pair].values.T, columns=labels.label.values)
-            #     )
             fl = (
                 features[pair].values.T,
                 labels[pair].values.T
