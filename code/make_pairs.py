@@ -7,6 +7,9 @@ An example working config is evp_120itr_12day.yml
 
 Usage: python make_pairs.py <config_name>
 Example: python make_pairs.py evp_120itr_12day
+
+Alternatively, if more memory is needed, use the provided make_pairs.sh script to submit via srun with 128G memory:
+./make_pairs.sh <config_name>
 '''
 import yaml
 import sys
