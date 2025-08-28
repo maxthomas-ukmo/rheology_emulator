@@ -83,6 +83,9 @@ def make_pairs(filelist, features, labels):
     # Concatenate along the 'pair' dimension if more than one file
     if len(pair_ds_list) > 1:
         paired_ds = xr.concat(pair_ds_list, dim="pair")
+        # Reset the 'pair' coordinate to be a continuous range from 0 to total_pairs-1
+        total_pairs = paired_ds.sizes['pair']
+        paired_ds = paired_ds.assign_coords(pair=np.arange(total_pairs))
     else:
         paired_ds = pair_ds_list[0]
 
