@@ -1,4 +1,3 @@
-import pickle 
 import torch
 import yaml
 import logging
@@ -201,42 +200,6 @@ class NNCapsule:
 
         return true_values, predictions
     
-    # def unscale_ytrue_ypred(self, scaled):
-    #     """
-    #     Unscale the true values and predictions using the scaler.
-    #     """
-    #     if self.scaler is None:
-    #         raise ValueError("Scaler is not defined. Ensure that the data manager has been initialized with scaling.")
-
-    #     # Unscale the values
-    #     unscaled = self.scaler.inverse_transform(scaled)
-    #     return unscaled
-
-    
-    def plot_ytrue_ypred(self, loader):
-        true_values, predictions = self.ytrue_ypred(loader)
-
-        # Fit a linear regression model on the predictions and true values, then plot the trendline
-        reg = LinearRegression().fit(true_values, predictions)
-        plt.figure(figsize=(8, 8))  
-        y_pred = reg.predict(true_values)
-        gradient = reg.coef_[0][0]
-
-        # Calculate MSE
-        mse = torch.nn.functional.mse_loss(predictions, true_values)
-        rmse_cms = torch.sqrt(mse) * 100  # Convert to cm/s
-
-        plt.title(f'RMSE: {rmse_cms:.2e} cm/s, Gradient: {gradient:.3f}')
-        plt.scatter(true_values, predictions, s=0.1)
-        plt.plot([-5,5], [-5,5], 'r--', label='1:1')
-        plt.plot(true_values, y_pred, 'r', label='Linear fit: ' + str(gradient))
-        plt.xlabel('True Values')
-        plt.ylabel('Predictions')
-        plt.grid()
-        plt.legend()
-        plt.savefig(self.arguments['results_path'] + 'true_pred.png')
-
-        logging.info("True vs Predicted values plotted and saved.")
 
     def evaluation_figure(self, loader='val', ax_reduce=0.5, n_bins=50):
 
@@ -289,10 +252,6 @@ class NNCapsule:
         logging.info(f"Evaluation figure for {loader} set saved.")
         
 
-
-        
-            
-
 def train_save_eval(arguments):
 
     nn_capsule = NNCapsule(arguments)
@@ -300,20 +259,7 @@ def train_save_eval(arguments):
     nn_capsule.train()
 
     nn_capsule.plot_train_losses(nn_capsule.train_losses, nn_capsule.val_losses)
-    nn_capsule.plot_ytrue_ypred(nn_capsule.val_loader)
     nn_capsule.evaluation_figure('val')
 
     logging.info("Training complete. Results saved in: " + arguments['results_path'])
     
-
-
-
-if __name__ == "__main__":
-    args = {'pairs_path': './pairs.pkl',
-            'batch_size': 32,
-            'val_fraction': 0.2,
-            'test_fraction': 0.1,
-            'scale_features': True}
-    
-    train_save_eval(args)
-

@@ -14,28 +14,17 @@ def parse_arguments():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--get_data', action='store_true', help="Enable data retrieval mode")
     parser.add_argument('--train', action='store_true', help="Enable training mode")
     parser.add_argument('--evaluate', action='store_true', help="Enable evaluation mode")
 
     parser.add_argument('--seed', type=int, default=0, help="Random seed for reproducibility")
 
-    # Optional arguments for raw and processed data retrieval
-    # TODO: tidy up other options after zarr is working, as zarr seems to be the much tidier way
-    parser.add_argument('--zarr', type=bool, default=False, help="Whether the pairs data is in zarr format")
-    parser.add_argument('--inputs', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], help="List of potential input variables to retrieve from raw data")
-    parser.add_argument('--raw_path', type=str, required=False, help="Path to the raw data file, for use with --get_data")
-    parser.add_argument('--interim_path', type=str, required=False, help="Path to the intermediate data, for use with --get_data")
-    parser.add_argument('--features', nargs='*', default=['sithic', 'sivolu', 'siconc', 'sivpnd', 'sivelu', 'sivelv', 'sivelo', 'utau_ai', 'vtau_ai', 'utau_oi', 'vtau_oi', 'sidive', 'sishea', 'sistre', 'normstr', 'sheastr'], required=False, help="Features for the processed data")
-    parser.add_argument('--labels', nargs='*', default=['sivelv'], required=False, help="Labels for the processed data")
-    parser.add_argument('--subset_region', type=str, required=False, default='Arctic', help="Region to subset the data to, default is 'Arctic'")
-
-
     # Run configuration file
     parser.add_argument('--training_cfg', type=str, help="Name of the training configuration file to load")
 
     # Optional arguments for training
-    parser.add_argument('--pairs_path', type=str, required=False, help="Path to the pairs data file for training")
+    parser.add_argument('--zarr', type=bool, default=True, help="Whether the pairs data is in zarr format - needs to be zarr to work with current code")
+    parser.add_argument('--pairs_path', type=str, required=False, help="Path to the pairs data file for training - should be a zarr")
     parser.add_argument('--results_path', type=str, required=False, help="Path to where model results will be saved")
     parser.add_argument('--batch_size', type=int, default=64, help="Batch size for training")
     parser.add_argument('--val_fraction', type=float, default=0.2, help="Fraction of data to use for validation")
@@ -88,32 +77,6 @@ def setup_results(args):
     logging.info(f"Results directory set up at {args['results_path']}")
 
 
-def retrieve_data(args):
-    if not args['get_data']:
-        print("Data retrieval mode is not enabled. Use --get_data to enable it.")
-        return
-    
-    setup_logging(log_file='retrieve_data.log')  # Set up logging
-    logging.info(f"Arguments for data retrieval: {args}")
-
-    from src.data_manager import DataManager
-    data_manager = DataManager(                            
-                                interim_path=args['interim_path'],
-                                pairs_path=args['pairs_path'],
-                                raw_path=args['raw_path'],
-                                arguments=args
-    )
-    logging.info("Data retrieval completed successfully.")
-
-    # Copy log to interim and pairs paths
-    if data_manager.created_interim:
-        shutil.copy('retrieve_data.log', args['interim_path']+'.log')
-
-    if data_manager.created_pairs:
-        shutil.copy('retrieve_data.log', args['pairs_path']+'.log')
-
-    os.remove('retrieve_data.log')  # Clean up log file after copying
-                               
 def train_model(args):
 
     # Setup logging for training
@@ -154,15 +117,16 @@ def main():
     print(args)
 
     # Check if multiple modes are enabled
-    if args['get_data'] + args['train'] + args['evaluate'] > 1:
-        print("Error: Only one mode can be enabled at a time. Please choose one of --get_processed_data, --train, or --evaluate.")
+    if args['train'] + args['evaluate'] > 1:
+        print("Error: Only one mode can be enabled at a time. Please choose one of --train or --evaluate.")
         return
-
-    elif args['get_data']:
-        retrieve_data(args)
 
     elif args['train']:
         train_model(args)
+
+    # TODO: write eval code to work on test set
+    elif args['evaluate']:
+        print('Need to write eval code!')
         
 
 if __name__ == "__main__":
