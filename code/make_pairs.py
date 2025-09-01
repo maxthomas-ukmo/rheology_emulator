@@ -20,10 +20,10 @@ import numpy as np
 from pathlib import Path
 
 def read_cfg(cfg_name):
-    ''' Read config to dict, with some logic to deal with +/- the .yml extension. '''
-    if cfg_name.endswith('.yml'):
-        cfg_name = cfg_name[:-4]
-    cfg_path = '../configs/data_gathering/' + cfg_name + '.yml'
+    ''' Read config to dict, with some logic to deal with +/- the .yaml extension. '''
+    if cfg_name.endswith('.yaml'):
+        cfg_name = cfg_name[:-5]
+    cfg_path = '../configs/data_gathering/' + cfg_name + '.yaml'
     with open(cfg_path, 'r') as f:
         cfg = yaml.safe_load(f)
     return cfg
