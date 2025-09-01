@@ -8,3 +8,5 @@ code/*.pkl*
 code/src/*.ipynb*
 code/src/*.nc*
 code/src/*.pkl*
+
+code/raw_retrieval/*
