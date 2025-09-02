@@ -13,6 +13,7 @@ Alternatively, if more memory is needed, use the provided make_pairs.sh script t
 '''
 import yaml
 import sys
+import shutil 
 
 import xarray as xr
 import numpy as np
@@ -116,6 +117,12 @@ def main(cfg):
 
     saved_to = save_pairs(paired_ds, output_path, data_label)
     print('Saved pairs to: %s' % saved_to)
+
+    # TODO: move log file to saved_to
+    logfile = f'{data_label}_make_pairs.log' # needs to match make_pairs.sh
+    logfile_path = Path(output_path, logfile)
+    print('Log file: %s' % logfile_path)
+    shutil.move(Path('logs', logfile), logfile_path)
 
 if __name__ == "__main__":
     # Example usage: python make_pairs.py evp_120itr_12day
