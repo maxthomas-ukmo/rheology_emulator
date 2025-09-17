@@ -1,0 +1,18 @@
+data_label: aevp_100itr_long
+raw_data_path: /data/scratch/max.thomas/rheology_training_data/
+output_path: /data/users/max.thomas/rheology_training_data/
+files:
+  - dr835o_1ts_19760101_19760101_icemod_19760101-19760101.nc
+  - dr835o_1ts_19760201_19760201_icemod_19760201-19760201.nc
+  - dr835o_1ts_19760301_19760301_icemod_19760301-19760301.nc
+  - dr835o_1ts_19760401_19760401_icemod_19760401-19760401.nc
+  - dr835o_1ts_19760501_19760501_icemod_19760501-19760501.nc
+  - dr835o_1ts_19760601_19760601_icemod_19760601-19760601.nc
+  - dr835o_1ts_19760701_19760701_icemod_19760701-19760701.nc
+  - dr835o_1ts_19760801_19760801_icemod_19760801-19760801.nc
+  - dr835o_1ts_19760901_19760901_icemod_19760901-19760901.nc
+  - dr835o_1ts_19761001_19761001_icemod_19761001-19761001.nc
+  - dr835o_1ts_19761101_19761101_icemod_19761101-19761101.nc
+  - dr835o_1ts_19761201_19761201_icemod_19761201-19761201.nc
+features: ['siconc', 'sithic', 'sivelv', 'sivelu', 'utau_ai', 'utau_oi', 'vtau_ai', 'vtau_oi', 'sidive', 'sishea']
+labels: ['sivelv', 'sivelu']
