@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset, DataLoader, random_split
 
 class TorchDataManager:
-    def __init__(self, file_path, arguments=None, zarr=False, difference_labels=False):
+    def __init__(self, file_path, arguments=None, zarr_fmt='fmt1', difference_labels=False):
         # Initialize the data manager with the file path and arguments
         self.file_path = file_path
         self.batch_size = arguments['batch_size']
@@ -18,19 +18,22 @@ class TorchDataManager:
         self.scale = arguments['scale_features']
         self.train_features = arguments['train_features']
         self.train_labels = arguments['train_labels']
-        self.zarr = zarr
+        self.zarr_fmt = zarr_fmt
         self.difference_labels = difference_labels
 
         # Load the data from the specified file path
-        if self.zarr:
-            self.raw_data = self._load_zarr()
-        else:
-            self.raw_data = self._load()
+        if self.zarr_fmt == 'fmt1':
+            self.raw_data = self._load_zarr_1()
+            self.pairs = FeatureLabelDataset(self.raw_data)
+        elif self.zarr_fmt == 'fmt2':
+            self.raw_data = self._load_zarr_2()
+            self.pairs = FeatureLabelDataset_2(self.raw_data)
+        # else:
+        #     self.raw_data = self._load()
 
         # if self.difference_labels:
         #     self._make_labels_differenced()
 
-        self.pairs = FeatureLabelDataset(self.raw_data)
 
         # Get loaders for training, validation, and testing
         self.train, self.val, self.test = self._get_data_loaders()
@@ -40,29 +43,26 @@ class TorchDataManager:
         
     def _print_summary(self):
         print(f"Data loaded from {self.file_path}")
-        if self.zarr:
-            print("Data from a zarr")
-        else:
-            print("Data from a pickle file")
+        print(f"Data from zarr {self.zarr_fmt} format")
         print(f"Batch size: {self.batch_size}")
         print(f"Validation fraction: {self.val_fraction}")
         print(f"Test fraction: {self.test_fraction}")
         print(f"Dataset sizes: Train={len(self.train.dataset)}, Val={len(self.val.dataset)}, Test={len(self.test.dataset)}")
     
 
-    def _load(self):
-        # with open(self.file_path, 'rb') as f:
-        #     return pickle.load(f)
+    # def _load(self):
+    #     # with open(self.file_path, 'rb') as f:
+    #     #     return pickle.load(f)
         
-        with open(self.file_path, 'rb') as f:
-            pairs = pickle.load(f)
+    #     with open(self.file_path, 'rb') as f:
+    #         pairs = pickle.load(f)
 
-        # Get the required features and labels, and convert to a numpy array
-        pairs = self._extract_features_labels(pairs)
+    #     # Get the required features and labels, and convert to a numpy array
+    #     pairs = self._extract_features_labels(pairs)
 
-        return pairs
+    #     return pairs
     
-    def _load_zarr(self):
+    def _load_zarr_1(self):
 
         pairs = xr.open_zarr(self.file_path)
 
@@ -107,6 +107,23 @@ class TorchDataManager:
             pd_pairs.append(fl)
 
         return pd_pairs
+    
+    def _load_zarr_2(self):
+        
+        pairs = xr.open_zarr(self.file_path)
+
+        # Process zarr
+        features = pairs.features.sel(feature=self.train_features)
+        labels = pairs.labels.sel(label=self.train_labels)
+
+        # TODO: need to implement differencing here
+        if self.difference_labels:
+            pass
+
+        pd_features = pd.DataFrame(features.values.T, columns=self.train_features)
+        pd_labels = pd.DataFrame(labels.values.T, columns=self.train_labels)
+
+        return (pd_features.values, pd_labels.values)
 
     def _make_labels_differenced(self):
         # Subtract features from labels for all pairs
@@ -125,6 +142,7 @@ class TorchDataManager:
     def _scale_features(self, pairs):
         scaler = StandardScaler()
         # Fit the scaler on the features
+        # TODO: this will NOT work with fmt2, need to think about how to do this properly
         scaler.fit(pairs[0][0])  # TODO: This assumes first feature is representative, so need to think about this
         # Transform the features
         scaled_features = [scaler.transform(features) for features, _ in pairs]
@@ -174,6 +192,16 @@ class FeatureLabelDataset(Dataset):
         features, label = self.data[idx]
         return features, label
     
+class FeatureLabelDataset_2(Dataset):
+    def __init__(self, data):
+        self.features, self.labels = data
+    
+    def __len__(self):
+        return len(self.features)
+
+    def __getitem__(self, idx):
+        return self.features[idx], self.labels[idx]
+
 def make_training_data_from_pairs(pairs, arguments):
     pass
 

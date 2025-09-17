@@ -23,7 +23,7 @@ def parse_arguments():
     parser.add_argument('--training_cfg', type=str, help="Name of the training configuration file to load")
 
     # Optional arguments for training
-    parser.add_argument('--zarr', type=bool, default=True, help="Whether the pairs data is in zarr format - needs to be zarr to work with current code")
+    parser.add_argument('--zarr_fmt', type=str, default='fmt1', help="fmt1: zarr with separate pairs (via make_pairs.py), fmt2: zarr with concatonated pairs (via make_pairs_2.py)")
     parser.add_argument('--difference_labels', type=bool, default=False, help="Whether to use differenced (l(t+1) - l(t) or absolute labels (l(t+1))")
     parser.add_argument('--pairs_path', type=str, required=False, help="Path to the pairs data file for training - should be a zarr")
     parser.add_argument('--results_path', type=str, required=False, help="Path to where model results will be saved")

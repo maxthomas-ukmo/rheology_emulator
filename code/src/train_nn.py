@@ -15,7 +15,7 @@ import torch.optim as optim
 # import ordinary least squares regression
 from sklearn.linear_model import LinearRegression
 
-from .dataset_utils import TorchDataManager
+# from .dataset_utils import TorchDataManager
 
 # def nn_layer_list(config_path='../configs/nn_architecture/base.yaml'):
 #     with open(config_path, "r") as f:
@@ -90,14 +90,28 @@ class NNCapsule:
         self.arguments = arguments
 
         # Load data
-        self.data_manager = TorchDataManager(arguments['pairs_path'], arguments, zarr=arguments['zarr'], difference_labels=arguments['difference_labels'])
-        self.train_loader = self.data_manager.train.dataset
-        self.val_loader = self.data_manager.val.dataset
-        self.n_features = self.train_loader[0][0].shape[1]
-        self.n_labels = self.train_loader[0][1].shape[1]
-        self.n_batches = len(self.train_loader)
-        self.n_samples = len(self.train_loader.dataset)
-        self.n_observations = self.train_loader[10][0].shape[0]
+        self.zarr_fmt = arguments['zarr_fmt']
+        if self.zarr_fmt == 'fmt1':
+            from .dataset_utils import TorchDataManager
+            self.data_manager = TorchDataManager(arguments['pairs_path'], arguments, zarr_fmt=self.zarr_fmt, difference_labels=arguments['difference_labels'])
+            self.train_loader = self.data_manager.train.dataset
+            self.val_loader = self.data_manager.val.dataset
+            self.n_features = self.train_loader[0][0].shape[1]
+            self.n_labels = self.train_loader[0][1].shape[1]
+            self.n_batches = len(self.train_loader)
+            self.n_samples = len(self.train_loader.dataset)
+            self.n_observations = self.train_loader[10][0].shape[0]
+        elif self.zarr_fmt == 'fmt2':
+            from .torch_data_manager import TorchDataManager
+            self.data_manager = TorchDataManager(arguments['pairs_path'], arguments, difference_labels=arguments['difference_labels'])
+            self.n_features = self.data_manager.n_features
+            self.n_labels = self.data_manager.n_labels
+            self.n_samples = self.data_manager.n_train
+            self.n_batches = self.data_manager.n_batches_train
+            self.train_loader = self.data_manager.train_loader
+            self.val_loader = self.data_manager.val_loader
+            self.test_loader = self.data_manager.test_loader
+
         self.scaler = self.data_manager.scaler
 
         # Define model
@@ -120,7 +134,7 @@ class NNCapsule:
         logging.info(f"Architecture: {self.architecture}")
         logging.info(f"Parameters: {self.parameters}")
         logging.info(f"Number of training samples: {self.n_samples}")
-        logging.info(f"Number of data points in sample: {self.n_observations}")
+        #logging.info(f"Number of data points in sample: {self.n_observations}")
         logging.info(f"Number of batches: {self.n_batches}")
         logging.info(f"Number of features: {self.n_features}")
         logging.info(f"Number of labels: {self.n_labels}")
