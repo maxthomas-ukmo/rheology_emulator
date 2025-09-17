@@ -1,7 +1,9 @@
 import torch
 import yaml
 import logging
+import pickle
 
+from . import utils
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,64 +17,64 @@ from sklearn.linear_model import LinearRegression
 
 from .dataset_utils import TorchDataManager
 
-def nn_layer_list(config_path='../configs/nn_architecture/base.yaml'):
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)['model']
-    layer_list = []
-    for item in config:
-        layer_list.append([config[item]['type'], config[item]['args']])
-    return layer_list
+# def nn_layer_list(config_path='../configs/nn_architecture/base.yaml'):
+#     with open(config_path, "r") as f:
+#         config = yaml.safe_load(f)['model']
+#     layer_list = []
+#     for item in config:
+#         layer_list.append([config[item]['type'], config[item]['args']])
+#     return layer_list
 
-def match_io_dims(layer_list, n_features, n_labels):
-    layer_list[0][1][0] = n_features  # Set input dimension of the first layer
-    layer_list[-1][1][1] = n_labels  # Set output dimension of the last layer
-    return layer_list
+# def match_io_dims(layer_list, n_features, n_labels):
+#     layer_list[0][1][0] = n_features  # Set input dimension of the first layer
+#     layer_list[-1][1][1] = n_labels  # Set output dimension of the last layer
+#     return layer_list
 
-def build_model_from_layers(layer_list):
-    # Create a list to hold the layers
-    layers = []
+# def build_model_from_layers(layer_list):
+#     # Create a list to hold the layers
+#     layers = []
 
-    # Iterate through the layer definitions
-    for layer_type, args in layer_list:
-        # Get the layer class from nn
-        layer_class = getattr(torch.nn, layer_type)
-        # Instantiate the layer with the provided arguments
-        layers.append(layer_class(*args))
+#     # Iterate through the layer definitions
+#     for layer_type, args in layer_list:
+#         # Get the layer class from nn
+#         layer_class = getattr(torch.nn, layer_type)
+#         # Instantiate the layer with the provided arguments
+#         layers.append(layer_class(*args))
 
-    # Create the neural network using nn.Sequential
-    model = torch.nn.Sequential(*layers)
+#     # Create the neural network using nn.Sequential
+#     model = torch.nn.Sequential(*layers)
 
-    # Print the model
-    logging.info('Neural net architecture:')
-    logging.info(model)
+#     # Print the model
+#     logging.info('Neural net architecture:')
+#     logging.info(model)
 
-    return model
+#     return model
 
-def nn_options(model, parameters='../configs/parameters/nn_base.yaml'):
-    """
-    Define the loss function, optimizer, and number of epochs based on a YAML configuration.
-    """
-    if parameters is None:
-        raise ValueError("An architecture YAML file must be provided.")
+# def nn_options(model, parameters='../configs/parameters/nn_base.yaml'):
+#     """
+#     Define the loss function, optimizer, and number of epochs based on a YAML configuration.
+#     """
+#     if parameters is None:
+#         raise ValueError("An architecture YAML file must be provided.")
 
-    # Load the YAML configuration
-    with open(parameters, "r") as f:
-        config = yaml.safe_load(f)
+#     # Load the YAML configuration
+#     with open(parameters, "r") as f:
+#         config = yaml.safe_load(f)
 
-    # Define the loss function
-    loss_type = config.get("loss", "MSELoss")  # Default to MSELoss if not specified
-    criterion = getattr(nn, loss_type)()
+#     # Define the loss function
+#     loss_type = config.get("loss", "MSELoss")  # Default to MSELoss if not specified
+#     criterion = getattr(nn, loss_type)()
 
-    # Define the optimizer
-    optimizer_type = config.get("optimizer", "Adam")  # Default to Adam if not specified
-    lr = config.get("learning_rate", 0.001)  # Default learning rate
-    optimizer_class = getattr(optim, optimizer_type)
-    optimizer = optimizer_class(model.parameters(), lr=lr)
+#     # Define the optimizer
+#     optimizer_type = config.get("optimizer", "Adam")  # Default to Adam if not specified
+#     lr = config.get("learning_rate", 0.001)  # Default learning rate
+#     optimizer_class = getattr(optim, optimizer_type)
+#     optimizer = optimizer_class(model.parameters(), lr=lr)
 
-    # Define the number of epochs
-    n_epochs = config.get("epochs", 10)  # Default to 10 epochs
+#     # Define the number of epochs
+#     n_epochs = config.get("epochs", 10)  # Default to 10 epochs
 
-    return criterion, optimizer, n_epochs
+#     return criterion, optimizer, n_epochs
 
 def setup_logging(log_file='train_nn.log'):
     """
@@ -103,9 +105,9 @@ class NNCapsule:
         #self.parameters = arguments['parameters']
         # TODO: this is clunky and params should be wrapped up into arguments
         self.parameters = '../configs/training/' + arguments['training_cfg'] + '.yaml'
-        self.model = self._define_nn()
+        self.model = utils.define_nn(self.architecture, self.n_features, self.n_labels)
         # TODO: split the below up so that they're called separately, or do some order agnostic unpacking of all the parameters
-        self.criterion, self.optimizer, self.n_epochs = nn_options(self.model, self.parameters)
+        self.criterion, self.optimizer, self.n_epochs = utils.nn_options(self.model, self.parameters)
         self.train_losses = []
         self.val_losses = []
 
@@ -124,17 +126,17 @@ class NNCapsule:
         logging.info(f"Number of labels: {self.n_labels}")
     
 
-    def _define_nn(self):
-        layer_list = nn_layer_list(self.architecture)
-        layer_list = match_io_dims(layer_list, self.n_features, self.n_labels)
-        model = build_model_from_layers(layer_list)
-        # Parallelize model if multiple GPUs are available
-        if torch.cuda.device_count() > 1:
-            logging.info(f"Using {torch.cuda.device_count()} GPUs for DataParallel")
-            model = torch.nn.DataParallel(model)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model = model.to(device)
-        return model
+    # def _define_nn(self):
+    #     layer_list = nn_layer_list(self.architecture)
+    #     layer_list = match_io_dims(layer_list, self.n_features, self.n_labels)
+    #     model = build_model_from_layers(layer_list)
+    #     # Parallelize model if multiple GPUs are available
+    #     if torch.cuda.device_count() > 1:
+    #         logging.info(f"Using {torch.cuda.device_count()} GPUs for DataParallel")
+    #         model = torch.nn.DataParallel(model)
+    #     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #     model = model.to(device)
+    #     return model
 
     def train(self):
         for epoch in range(self.n_epochs):
@@ -251,6 +253,19 @@ class NNCapsule:
         plt.savefig(self.arguments['results_path'] + f'evaluation_{loader}.png')
 
         logging.info(f"Evaluation figure for {loader} set saved.")
+    
+    def save_model(self, path):
+
+        model_recreator = {
+            'state_dict': self.model.state_dict(),
+            'architecture': self.architecture,
+            'n_features': self.n_features,
+            'n_labels': self.n_labels,
+            'scaler': self.scaler
+        }
+
+        with open(path, 'wb') as f:
+            pickle.dump(model_recreator, f)                 
         
 
 def train_save_eval(arguments):
@@ -261,6 +276,8 @@ def train_save_eval(arguments):
 
     nn_capsule.plot_train_losses(nn_capsule.train_losses, nn_capsule.val_losses)
     nn_capsule.evaluation_figure('val')
+
+    nn_capsule.save_model(arguments['results_path'] + 'nn_model_recreator.pkl')
 
     logging.info("Training complete. Results saved in: " + arguments['results_path'])
     

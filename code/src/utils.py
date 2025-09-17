@@ -6,11 +6,15 @@ import pickle
 import random
 import warnings
 import pprint
+import torch
+import yaml
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
+import torch.nn as nn
+import torch.optim as optim
 
 
 # Parse command line arguments
@@ -182,3 +186,69 @@ def make_validation(train_X, train_y, validation_fraction):
     print('Validation shape: ', val_X.shape, val_y.shape)
 
     return train_X, train_y, val_X, val_y
+
+def define_nn(architecture, n_features, n_labels):
+    layer_list = nn_layer_list(architecture)
+    layer_list = match_io_dims(layer_list, n_features, n_labels)
+    model = build_model_from_layers(layer_list)
+    # Parallelize model if multiple GPUs are available
+    if torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    return model
+
+def nn_layer_list(config_path='../configs/nn_architecture/base.yaml'):
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)['model']
+    layer_list = []
+    for item in config:
+        layer_list.append([config[item]['type'], config[item]['args']])
+    return layer_list
+
+def match_io_dims(layer_list, n_features, n_labels):
+    layer_list[0][1][0] = n_features  # Set input dimension of the first layer
+    layer_list[-1][1][1] = n_labels  # Set output dimension of the last layer
+    return layer_list
+
+def build_model_from_layers(layer_list):
+    # Create a list to hold the layers
+    layers = []
+
+    # Iterate through the layer definitions
+    for layer_type, args in layer_list:
+        # Get the layer class from nn
+        layer_class = getattr(torch.nn, layer_type)
+        # Instantiate the layer with the provided arguments
+        layers.append(layer_class(*args))
+
+    # Create the neural network using nn.Sequential
+    model = torch.nn.Sequential(*layers)
+
+    return model
+
+def nn_options(model, parameters='../configs/parameters/nn_base.yaml'):
+    """
+    Define the loss function, optimizer, and number of epochs based on a YAML configuration.
+    """
+    if parameters is None:
+        raise ValueError("An architecture YAML file must be provided.")
+
+    # Load the YAML configuration
+    with open(parameters, "r") as f:
+        config = yaml.safe_load(f)
+
+    # Define the loss function
+    loss_type = config.get("loss", "MSELoss")  # Default to MSELoss if not specified
+    criterion = getattr(nn, loss_type)()
+
+    # Define the optimizer
+    optimizer_type = config.get("optimizer", "Adam")  # Default to Adam if not specified
+    lr = config.get("learning_rate", 0.001)  # Default learning rate
+    optimizer_class = getattr(optim, optimizer_type)
+    optimizer = optimizer_class(model.parameters(), lr=lr)
+
+    # Define the number of epochs
+    n_epochs = config.get("epochs", 10)  # Default to 10 epochs
+
+    return criterion, optimizer, n_epochs
