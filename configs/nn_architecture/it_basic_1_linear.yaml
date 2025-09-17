@@ -1,0 +1,13 @@
+
+model:
+  fc1:
+    type: Linear
+    args: [999, 10] 
+  identity:
+    type: Identity
+    args: []
+  fc2:
+    type: Linear
+    args: [10, 999]
+
+

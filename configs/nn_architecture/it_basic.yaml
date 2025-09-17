@@ -1,0 +1,11 @@
+model:
+  fc1:
+    type: Linear
+    args: [999, 2]
+  relu1:
+    type: ReLU
+    args: []
+  fc2:
+    type: Linear
+    args: [2, 999]
+  
