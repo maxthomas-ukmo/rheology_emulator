@@ -24,6 +24,7 @@ def parse_arguments():
 
     # Optional arguments for training
     parser.add_argument('--zarr', type=bool, default=True, help="Whether the pairs data is in zarr format - needs to be zarr to work with current code")
+    parser.add_argument('--difference_labels', type=bool, default=False, help="Whether to use differenced (l(t+1) - l(t) or absolute labels (l(t+1))")
     parser.add_argument('--pairs_path', type=str, required=False, help="Path to the pairs data file for training - should be a zarr")
     parser.add_argument('--results_path', type=str, required=False, help="Path to where model results will be saved")
     parser.add_argument('--batch_size', type=int, default=64, help="Batch size for training")

@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset, DataLoader, random_split
 
 class TorchDataManager:
-    def __init__(self, file_path, arguments=None, zarr=False):
+    def __init__(self, file_path, arguments=None, zarr=False, difference_labels=False):
         # Initialize the data manager with the file path and arguments
         self.file_path = file_path
         self.batch_size = arguments['batch_size']
@@ -19,12 +19,16 @@ class TorchDataManager:
         self.train_features = arguments['train_features']
         self.train_labels = arguments['train_labels']
         self.zarr = zarr
+        self.difference_labels = difference_labels
 
         # Load the data from the specified file path
         if self.zarr:
             self.raw_data = self._load_zarr()
         else:
             self.raw_data = self._load()
+
+        # if self.difference_labels:
+        #     self._make_labels_differenced()
 
         self.pairs = FeatureLabelDataset(self.raw_data)
 
@@ -84,6 +88,16 @@ class TorchDataManager:
         features = pairs['features'].sel(feature=self.train_features)
         labels = pairs['labels'].sel(label=self.train_labels)
 
+        if self.difference_labels:
+            for ilabel, label in enumerate(self.train_labels):
+                if label in self.train_features:
+                    new_label_values = labels.sel(label=label).values - features.sel(feature=label).values
+                    labels.loc[dict(label=label)] = xr.DataArray(
+                            new_label_values,
+                            dims=('pair', 'xy'),
+                            coords={'pair': labels.pair, 'xy': labels.xy}
+                        )
+
         pd_pairs = []
         for pair in range(features.shape[0]):
             fl = (
@@ -93,6 +107,10 @@ class TorchDataManager:
             pd_pairs.append(fl)
 
         return pd_pairs
+
+    def _make_labels_differenced(self):
+        # Subtract features from labels for all pairs
+        pass
 
     def _extract_features_labels(self, pairs):
         # Subset to the desired features and labels
@@ -155,3 +173,9 @@ class FeatureLabelDataset(Dataset):
     def __getitem__(self, idx):
         features, label = self.data[idx]
         return features, label
+    
+def make_training_data_from_pairs(pairs, arguments):
+    pass
+
+def make_data_loaders(dataset, batch_size, val_fraction, test_fraction):
+    pass

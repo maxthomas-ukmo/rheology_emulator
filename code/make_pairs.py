@@ -35,10 +35,10 @@ def make_filelist(cfg):
     filelist = [raw_data_path / fname for fname in cfg['files']]
     return filelist
 
-def make_pairs(filelist, features, labels):
+def make_pairs(filelist, features, labels, stack_pairs=False):
     ''' 
     Make pairs of features at time t and labels at time t+1 from list of input files, features, and labels.
-     
+
     Returns an xarray Dataset with dimensions:
     - pair: pairs of features and labels 
     - feature: features at time t (e.g. siconv, sivelv)
@@ -89,6 +89,12 @@ def make_pairs(filelist, features, labels):
         paired_ds = paired_ds.assign_coords(pair=np.arange(total_pairs))
     else:
         paired_ds = pair_ds_list[0]
+
+    if stack_pairs:
+        # Stack the pair dimension into the spatial dimensions to create a larger dataset
+        paired_ds = paired_ds.stack(z=('pair', 'y', 'x'))
+        paired_ds = paired_ds.drop_vars('pair')
+        paired_ds = paired_ds.rename({'z': 'pair'})
 
     return paired_ds
 

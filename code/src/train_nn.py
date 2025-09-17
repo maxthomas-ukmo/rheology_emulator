@@ -88,7 +88,7 @@ class NNCapsule:
         self.arguments = arguments
 
         # Load data
-        self.data_manager = TorchDataManager(arguments['pairs_path'], arguments, zarr=arguments['zarr'])
+        self.data_manager = TorchDataManager(arguments['pairs_path'], arguments, zarr=arguments['zarr'], difference_labels=arguments['difference_labels'])
         self.train_loader = self.data_manager.train.dataset
         self.val_loader = self.data_manager.val.dataset
         self.n_features = self.train_loader[0][0].shape[1]
@@ -222,8 +222,9 @@ class NNCapsule:
         # Make an evaluation figure, with a hexbin plot and a histogram of the true and predicted
         plt.figure(figsize=(8,12), dpi=300)
         plt.subplot(2, 1, 1)
-        plt.hexbin(true_values, predictions, gridsize=150, cmap='Blues', mincnt=10, bins='log')
-        plt.colorbar(label='Counts')
+        #plt.hexbin(true_values, predictions, gridsize=150, cmap='Blues', mincnt=10, bins='log')
+        #plt.colorbar(label='Counts')
+        plt.scatter(true_values, predictions, s=0.5, alpha=0.2)
         plt.plot([-5, 5], [-5, 5], 'r--', label='1:1')
         plt.plot(true_values, reg.predict(true_values), 'r', label='Linear fit: '+ str(round(gradient,2)))
         plt.xlabel('True Values')
