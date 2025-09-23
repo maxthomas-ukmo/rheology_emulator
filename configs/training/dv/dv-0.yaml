@@ -1,4 +1,4 @@
-# Initial testing of model predicting differenced labels, testing on 1200 itr data 
+# First look with new data format (long list of features/labels)
 
 # Paths, relative to /code where main.py is run
 pairs_path: ../data/raw/shortevp.zarr
