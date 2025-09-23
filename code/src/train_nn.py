@@ -10,6 +10,7 @@ import numpy as np
 from pathlib import Path
 import torch.nn as nn
 import torch.optim as optim
+import pandas as pd
 
 
 # import ordinary least squares regression
@@ -216,6 +217,40 @@ class NNCapsule:
 
         return true_values, predictions
     
+    def save_ytrue_ypred_inputs(self, loader, path):
+        predictions = []
+        true_values = []
+        inputs_list = []
+        with torch.no_grad():  # Disable gradient tracking
+            for inputs, targets in loader:
+                #inputs = inputs.to(device)
+                outputs = self.model(inputs)
+                # predictions.append(outputs.cpu())
+                # true_values.append(targets.cpu())
+                predictions.append(outputs)
+                true_values.append(targets)
+                inputs_list.append(inputs)
+
+        # Concatenate all batches into single tensors
+        predictions = torch.cat(predictions, dim=0)
+        true_values = torch.cat(true_values, dim=0)
+        inputs_all = torch.cat(inputs_list, dim=0)
+
+        # Unscale the inputs
+        inputs_all = self.scaler.inverse_transform(inputs_all)
+
+        # Save to a CSV file
+        df = pd.DataFrame({
+            'True Values': true_values.numpy().flatten(),
+            'Predictions': predictions.numpy().flatten()
+        })
+        # Add input features to the dataframe
+        for i in range(inputs_all.shape[1]):
+            df[f'Input Feature {i+1}'] = inputs_all[:, i].flatten()
+        
+        df.to_csv(path, index=False)
+        logging.info(f"True values, predictions, and inputs saved to {path}")
+    
 
     def evaluation_figure(self, loader='val', ax_reduce=0.5, n_bins=50):
 
@@ -238,9 +273,9 @@ class NNCapsule:
         # Make an evaluation figure, with a hexbin plot and a histogram of the true and predicted
         plt.figure(figsize=(8,12), dpi=300)
         plt.subplot(2, 1, 1)
-        #plt.hexbin(true_values, predictions, gridsize=150, cmap='Blues', mincnt=10, bins='log')
-        #plt.colorbar(label='Counts')
-        plt.scatter(true_values, predictions, s=0.5, alpha=0.2)
+        plt.hexbin(true_values, predictions, gridsize=150, cmap='Blues', mincnt=10, bins='log')
+        plt.colorbar(label='Counts')
+        # plt.scatter(true_values, predictions, s=0.5, alpha=0.2)
         plt.plot([-5, 5], [-5, 5], 'r--', label='1:1')
         plt.plot(true_values, reg.predict(true_values), 'r', label='Linear fit: '+ str(round(gradient,2)))
         plt.xlabel('True Values')
@@ -289,9 +324,15 @@ def train_save_eval(arguments):
     nn_capsule.train()
 
     nn_capsule.plot_train_losses(nn_capsule.train_losses, nn_capsule.val_losses)
-    nn_capsule.evaluation_figure('val')
+    nn_capsule.evaluation_figure('train')
 
     nn_capsule.save_model(arguments['results_path'] + 'nn_model_recreator.pkl')
+
+    if arguments['save_data']:
+        nn_capsule.data_manager.save_datasets(arguments['results_path'] + 'data_splits/')
+
+    if arguments['save_val']:
+        nn_capsule.save_ytrue_ypred_inputs(nn_capsule.val_loader, arguments['results_path'] + 'ytrue_ypred_val.csv')
 
     logging.info("Training complete. Results saved in: " + arguments['results_path'])
     

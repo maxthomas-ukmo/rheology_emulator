@@ -17,6 +17,9 @@ def parse_arguments():
     parser.add_argument('--train', action='store_true', help="Enable training mode")
     parser.add_argument('--evaluate', action='store_true', help="Enable evaluation mode")
 
+    parser.add_argument('--save_data', type=bool, default=False, help="Whether to save the training, validation, and test datasets after splitting")
+    parser.add_argument('--save_val', type=bool, default=False, help="Whether to save the validation ytrue, ypred, and inputs after training")
+
     parser.add_argument('--seed', type=int, default=0, help="Random seed for reproducibility")
 
     # Run configuration file
@@ -32,6 +35,8 @@ def parse_arguments():
     parser.add_argument('--test_fraction', type=float, default=0.1, help="Fraction of data to use for testing")
     parser.add_argument('--scale_features', action='store_true', default=True, help="Enable feature scaling for training")
     parser.add_argument('--architecture', type=int, default=0, help="Full path to yaml with architecture")
+    parser.add_argument('--shorten_dataset', type=int, default=None, help="Whether to shorten the dataset to 10,000 samples for quick testing/debugging")
+    parser.add_argument('--sequential', action='store_true', default=False, help="Whether to use sequential data loading (for RNNs)")
 
     return vars(parser.parse_args())
 
@@ -76,6 +81,10 @@ def setup_results(args):
 
     os.makedirs(args['results_path'], exist_ok=True) 
     logging.info(f"Results directory set up at {args['results_path']}")
+
+    if args['save_data']:
+        os.makedirs(args['results_path'] + 'data_splits/', exist_ok=True) 
+        logging.info(f"Data splits directory set up at {args['results_path']}data_splits/")
 
 
 def train_model(args):
